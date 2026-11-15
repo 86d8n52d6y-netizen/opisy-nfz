@@ -51,7 +51,7 @@ h1 small{display:block;font-size:13px;font-weight:400;color:var(--muted)}
 .warn{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:7px 10px;font-size:13.5px;margin:8px 0}
 .grid{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end}
 .f{display:flex;flex-direction:column;gap:4px;min-width:140px}
-.f.s{min-width:90px;max-width:120px}.f.l{flex:1 1 320px}.f.full{flex:1 1 100%}
+.f.s{min-width:90px;max-width:120px}.f.m{min-width:170px;max-width:240px}.f.l{flex:1 1 320px}.f.full{flex:1 1 100%}
 .f>label,.f>.lab{font-size:12.5px;font-weight:600;color:var(--muted)}
 .lab .need{color:var(--fill);font-weight:600}
 input[type=text],select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:7px 9px;width:100%}
@@ -120,6 +120,15 @@ table.sum td.m{font-family:var(--font-mono)}
 .nfz-src{font-size:12px;color:var(--muted);margin-top:4px}
 .mintime{font-family:var(--font-mono);font-size:12.5px;border-radius:6px;padding:1px 7px;background:var(--warn-soft);color:var(--warn)}
 .mintime.bad{background:var(--fill-soft);color:var(--fill)}
+.pts{font-family:var(--font-mono);font-size:12.5px;border-radius:6px;padding:1px 7px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.chip .pts{margin-left:6px;padding:0 5px;font-size:11.5px}
+.chip.on .pts{background:transparent;color:var(--accent-ink);box-shadow:inset 0 0 0 1px currentColor}
+.pts-total{font-family:var(--font-mono);font-size:15px;font-weight:600;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:8px 12px;white-space:nowrap}
+.out-head .acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+a.pts-total{text-decoration:none}a.pts-total:hover{background:var(--accent);color:var(--accent-ink)}
+table.sum td.r,table.sum th.r{text-align:right;white-space:nowrap}
+table.sum tfoot td{border-bottom:0;border-top:2px solid var(--ink);font-weight:700;font-size:14.5px}
+table.sum .sub-n{display:block;font-family:var(--font-body);font-size:12px;color:var(--warn);margin-top:2px}
 .plans{border:1px solid var(--accent);background:var(--accent-soft);border-radius:var(--r);padding:12px 14px;margin:12px 0 4px}
 .plans-h{margin:0 0 8px;font-size:15px}
 .plan-row{display:grid;grid-template-columns:190px minmax(0,1fr);gap:8px 12px;align-items:center;padding:8px 0}
@@ -154,7 +163,7 @@ table.sum td.m{font-family:var(--font-mono)}
 <div class="toast" id="toast" role="status"></div>
 <textarea id="clip" aria-hidden="true" style="position:fixed;left:-9999px;top:0;opacity:0"></textarea>
 
-<script src="szablony.js?v=2026-11-15-7"></script>
+<script src="szablony.js?v=2026-11-15-8"></script>
 <script>
 
 /* ---------- stan ---------- */
@@ -356,7 +365,8 @@ const D={
    render:()=>['LECZENIE PRÓCHNICY POWIERZCHNIOWEJ (1101)','Próchnica początkowa na powierzchniach wargowych zębów '+teethTxt('1101','zęby leczone (diagram)')+' – zgodnie z diagramem.',SEG.T1101_A,
      'Pola zabiegowe osuszono i przystąpiono do procedury leczniczej. Uzyskano pełną hemostazę (brak krwawienia z brzegu dziąsłowego). Na zmiany w powierzchniach ww. zębów, na których to powierzchniach nie było ubytków próchnicowych wymagających opracowania wiertłem i wypełnienia, zastosowano lakier fluorkowy ('+V('1101.prep','preparat')+'). Zalecana częstotliwość: mniej więcej co 2–4 tygodnie przez 2–3 miesiące lub dłużej - aż do ustąpienia objawów i poprawy wyglądu plamy próchnicowej (utrata matowości, powrót połysku).',
      SEG.T1101_B,SEG.ZAL_BODY].join('\n')},
- '1006':{name:'Lakierowanie zębów',icd:'Z29.8 Inne określone środki profilaktyczne',tips:['co 3 mies. i 1 dzień'],
+ '1006':{name:'Lakierowanie zębów',icd:'Z29.8 Inne określone środki profilaktyczne',tips:['co 3 mies. i 1 dzień','1 świadczenie = ¼ łuku (1 ćwiartka)'],
+   diag:{mode:'quad',label:'Zaznacz lakierowane ćwiartki (każda = 1 × 1006 w wycenie; tekst opisu bez zmian)'},
    render:()=>['LAKIEROWANIE ZĘBÓW (1006)',SEG.T1006].join('\n')},
  '1105':fillCode('1105',{name:'Bezpośrednie pokrycie miazgi',title:TITLE_1105,tips:['kontrola po 8 tyg., potem 3, 6, 12, 18 mies.'],
    body:t=>{const p='T|1105|'+t+'|';return 'Całkowite opracowanie rozległego, głębokiego ubytku zęba '+t+' na powierzchni '+surfTxt('1105',t)+'. Podczas mechanicznego opracowania próchnicy nastąpiło obnażenie próchnicowe miazgi na bardzo małym fragmencie powierzchni.\nPacjent nie podaje aby miał dolegliwości bólowe ze strony zęba. Przepłukano ubytek NaCl, założono Ca (OH)2 nietwardniejący Biopulp, potem twardniejący Ca (OH)2  Life, podkład Ionosit oraz materiał:\n'+matText(p,'docx')+'\nZalecana kontrola po 8 tygodniach, następnie 3,6,12,18 mc, w razie dolegliwości bólowych kontrola w gabinecie stomatologicznym.';}}),
@@ -503,18 +513,86 @@ function nfzBox(){
 }
 function refreshNfz(){const el=document.getElementById('nfz-box');if(el){const t=document.createElement('div');t.innerHTML=nfzBox();el.replaceWith(t.firstElementChild);}}
 
+/* ---------- wycena punktowa NFZ ----------
+   Pakiety (zał. 1c do zarz. 60/2023/DSOZ): brzmienie z Zarządzenia 95/2026/DSOZ, zał. 1 – rozliczanie od 1.09.2026.
+   Świadczenia jednostkowe (zał. 1b): brzmienie z Zarządzenia 44/2025/DSOZ, zał. 1 – od 1.06.2025 (bez zmian w 95/2026).
+   Współczynniki (zarz. 60/2023/DSOZ z późn. zm.):
+   § 12 ust. 2 – ×1,5 dla dzieci do ukończenia 18 r.ż. (zał. 1b i 1c; brzmienie z 38/2025/DSOZ),
+   § 12 ust. 2a – ×1,5 nie dotyczy ST30D, ST30E, ST30F, ST30G (95/2026/DSOZ),
+   § 12 ust. 3 – ×1,2 kobiety w ciąży i w okresie połogu,
+   § 13 ust. 1 pkt 5 – kilka pakietów na wizycie: najwyżej wyceniony ×1,0, kolejne ×0,8,
+   § 13 ust. 1 pkt 5a – zasady pkt 5 nie stosuje się do ST30E i ST30G (95/2026/DSOZ). */
+const PTS_SRC='Wycena: zał. 1c – Zarządzenie 95/2026/DSOZ (pakiety, od 1.09.2026); zał. 1b – Zarządzenie 44/2025/DSOZ (świadczenia jednostkowe). Współczynniki: § 12 ust. 2, 2a, 3 i § 13 ust. 1 pkt 5, 5a zarządzenia 60/2023/DSOZ z późn. zm.';
+const PTS={ST01:93,ST02:104,ST04:130,ST19:86,ST26:51,ST28:96,ST30:44,ST30E:24,ST30G:96,ST33:56,ST34:47,
+ '1101':6,'1006':5,'1105':40,'1108':52,'1206':70,'1502':45,'1503':54,'1504':71,'1505':74};
+const PTS_AN={'0401':{n:'Znieczulenie miejscowe powierzchniowe',p:3},'0402':{n:'Znieczulenie miejscowe nasiękowe',p:12},'0403':{n:'Znieczulenie przewodowe wewnątrzustne',p:20}};
+const PTS_UNIT={ST01:'ząb',ST02:'ząb',ST30:'ćwiartka',ST30E:'ćwiartka',ST04:'ćwiartka','1101':'ząb','1006':'¼ łuku','1105':'ząb','1108':'ząb','1206':'kanał','1502':'ząb','1503':'ząb','1504':'ząb','1505':'ząb'};
+const PTS_NO15=['ST30D','ST30E','ST30F','ST30G'];   // § 12 ust. 2a
+const PTS_NO08=['ST30E','ST30G'];                   // § 13 ust. 1 pkt 5a
+const ANES_CODES=['1105','1108','1206','1502','1503','1504','1505'];
+const isPkg=c=>/^ST/.test(c);
+const PTS_PL={'ząb':['ząb','zęby','zębów'],'ćwiartka':['ćwiartka','ćwiartki','ćwiartek'],'kanał':['kanał','kanały','kanałów']};
+function ptsQtyTxt(c,q){const u=PTS_UNIT[c];if(!u)return String(q);const pl=PTS_PL[u];return q+' '+(pl?plural(q,...pl):'× '+u);}
+const fmtP=x=>(Math.round(x*100)/100).toFixed(2).replace(/\.?0+$/,'').replace('.',',');
+function ptsLabel(c){return PTS[c]==null?'':PTS[c]+' pkt'+(PTS_UNIT[c]?' / '+PTS_UNIT[c]:'');}
+function ptsQty(c){
+  if(c==='ST30'||c==='ST30E'||c==='1006'){const q=(state.quads[c]||[]).length;return q?[q,'']:[1,'przyjęto 1 – zaznacz ćwiartki'];}
+  if(c==='ST04'){const q=new Set(teethOf('ST04').map(qd)).size;return q?[q,'']:[1,'przyjęto 1 – zaznacz zęby'];}
+  if(c==='1206'){const w=str(state.a['1206.wiz']);
+    if(w.startsWith('II'))return [0,'II wizyta – nie rozliczasz 1206; rozlicz wypełnienie (1108 / 1502–1505) i ewent. ST26'];
+    const n=(state.a['1206.canals']||[]).filter(x=>x&&(str(x.n)||str(x.d)||str(x.m))).length;
+    return n?[n,has('1108')||['1502','1503','1504','1505'].some(has)?'':'+ dodaj kod wypełnienia korony (1108 / 15xx)']:[1,'przyjęto 1 kanał – uzupełnij kanały'];}
+  if(['ST01','ST02','ST19','1101','1105','1108','1502','1503','1504','1505'].includes(c)){const n=teethOf(c).length;return n?[n,'']:[1,'przyjęto 1 – zaznacz ząb na diagramie'];}
+  return [1,''];
+}
+function ptsCoef(c){const a=AGE();
+  if(a!==null&&a<18)return PTS_NO15.includes(c)?[1,'bez ×1,5']:[1.5,'×1,5'];
+  if(a!==null&&str(state.a['sh.preg'])==='tak')return [1.2,'×1,2'];
+  return [1,''];}
+function nfzPoints(){
+  const rows=[],inst=[];
+  state.codes.forEach(c=>{if(PTS[c]==null)return;const [q,note]=ptsQty(c);const [k,kn]=ptsCoef(c);
+    const r={c,name:D[c].name,q,base:PTS[c],k,kn,note,pkg:isPkg(c),n10:q,n08:0};rows.push(r);
+    if(r.pkg&&!PTS_NO08.includes(c))for(let i=0;i<q;i++)inst.push({r,v:r.base*r.k});});
+  if(inst.length>1){const top=inst.reduce((m,x)=>x.v>m.v?x:m,inst[0]);
+    rows.forEach(r=>{if(r.pkg&&!PTS_NO08.includes(r.c)){r.n10=0;r.n08=r.q;}});top.r.n10=1;top.r.n08-=1;}
+  Object.keys(PTS_AN).forEach(k=>{const n=parseInt(str(state.a['pt.an'+k]),10);if(n>0){const [kk,kn]=ptsCoef('23.'+k);
+    rows.push({c:'23.'+k,name:PTS_AN[k].n,q:n,base:PTS_AN[k].p,k:kk,kn,note:'',pkg:false,n10:n,n08:0});}});
+  rows.forEach(r=>{r.pts=r.base*r.k*(r.n10+0.8*r.n08);});
+  return {rows,total:Math.round(rows.reduce((t,r)=>t+r.pts,0)*100)/100};
+}
+function ptsPkgTxt(r){if(!r.pkg)return 'jednostkowe';if(PTS_NO08.includes(r.c))return '×1,0 (bez ×0,8)';if(!r.q)return '—';
+  if(!r.n08)return r.q>1?r.q+'×1,0':'×1,0';if(r.n10)return '1×1,0 + '+r.n08+'×0,8';return r.q>1?r.n08+'×0,8':'×0,8';}
+function ptsCard(){
+  const P=nfzPoints();if(!P.rows.length)return '';const a=AGE();
+  const tr=P.rows.map(r=>`<tr><td class="m">${esc(r.c)}${r.note?`<span class="sub-n">${esc(r.note)}</span>`:''}</td><td class="m r">${esc(ptsQtyTxt(r.c,r.q))}</td><td class="m r">${fmtP(r.base)}</td><td class="m">${r.kn?esc(r.kn):'—'}</td><td class="m">${esc(ptsPkgTxt(r))}</td><td class="m r"><b>${fmtP(r.pts)}</b></td></tr>`).join('');
+  const notes=[];
+  {const ce=nfzIssues().err.filter(e=>e.codes.length===2);if(ce.length)notes.push(`<div class="err">Suma zawiera kody, których NFZ nie rozliczy razem (${ce.map(e=>e.codes.join(' + ')).map(esc).join('; ')}) – usuń jeden z nich, aby wycena była realna.</div>`);}
+  if(a===null)notes.push('<div class="warn">Nie wpisano wieku – wycena bez współczynnika ×1,5 dla dzieci i młodzieży do 18 r.ż.</div>');
+  if(a!==null&&a<18&&has('1006'))notes.push('<div class="warn">1006 liczone ×1,5 jak w zakresie ogólnostomatologicznym. Jeśli rozliczasz je w profilaktycznych świadczeniach dla dzieci (§ 3 ust. 1 pkt 10 rozporządzenia), ×1,5 nie przysługuje (§ 12 ust. 2).</div>');
+  return `<section class="card" id="pts-card"><div class="out-head"><h2>Wycena punktowa wizyty (NFZ)</h2><span class="pts-total">Suma: ${fmtP(P.total)} pkt</span></div>${notes.join('')}
+  <div style="overflow-x:auto"><table class="sum"><thead><tr><th>Kod</th><th class="r">Ilość</th><th class="r">Pkt z katalogu</th><th>Wiek / ciąża</th><th>Pakiety (§ 13)</th><th class="r">Punkty</th></tr></thead><tbody>${tr}</tbody>
+  <tfoot><tr><td colspan="5">Suma punktów za wizytę</td><td class="m r">${fmtP(P.total)}</td></tr></tfoot></table></div>
+  <p class="note" style="margin:8px 0 0">×1,5 – dzieci i młodzież do ukończenia 18 r.ż. (pakiety i świadczenia jednostkowe; nie dotyczy ST30D–ST30G). ×1,2 – kobieta w ciąży lub połogu. Kilka pakietów na wizycie: najwyżej wyceniony ×1,0, każdy kolejny ×0,8 (1 pakiet = 1 ząb / 1 ćwiartka); ST30E i ST30G zawsze ×1,0, świadczenia jednostkowe nie podlegają ×0,8. Kwota w zł = punkty × cena punktu z Twojej umowy z OW NFZ.</p>
+  <div class="nfz-src">${esc(PTS_SRC)}</div></section>`;
+}
+function ptsExtraCard(){
+  if(!state.codes.some(c=>ANES_CODES.includes(c)))return '';
+  return `<section class="card" id="card-pts"><h2>Do wyceny: znieczulenia rozliczane osobno</h2><p class="note" style="margin:0 0 10px">Przy wypełnieniach, 1105 i 1206 znieczulenie jest osobnym świadczeniem z zał. 1b (w pakietach ST01, ST02, ST04, ST30 znieczulenie mieści się w pakiecie). Liczba trafia tylko do wyceny punktowej – nie do opisu.</p><div class="grid">${Object.entries(PTS_AN).map(([k,o])=>fieldHTML({k:'pt.an'+k,label:'23.'+k+' '+o.n.replace('Znieczulenie ','').replace('miejscowe ','')+' ('+o.p+' pkt)',type:'num',unit:'×',w:'m',opt:true})).join('')}</div></section>`;
+}
+
 /* ---------- render pól ---------- */
 function fieldHTML(f){
   if(f.sites) return sitesHTML(f.code,f.t);
   const v=getVal(f.k); const s=str(v);
   const empty=(Array.isArray(s)?!s.length:!s);
   const ageDef=f.age&&empty&&AGE()!==null?f.age(AGE()):'';
-  const cls='f'+(f.w==='s'?' s':f.w==='l'?' l':'')+(f.full?' full':'');
-  const lab=`<span class="lab">${esc(f.label)}${empty&&!ageDef?' <span class="need">· uzupełnij</span>':''}${ageDef?' <span class="note">(wg wieku)</span>':''}</span>`;
+  const cls='f'+(f.w==='s'?' s':f.w==='m'?' m':f.w==='l'?' l':'')+(f.full?' full':'');
+  const lab=`<span class="lab">${esc(f.label)}${empty&&!ageDef&&!f.opt?' <span class="need">· uzupełnij</span>':''}${ageDef?' <span class="note">(wg wieku)</span>':''}</span>`;
   const id='i_'+f.k.replace(/[^a-zA-Z0-9]/g,'_');
   if(f.type==='seg'){
     const cur=s||ageDef;
-    return `<div class="${cls}">${lab}<div class="seg${!cur?' empty':''}" role="group">${f.opts.map(o=>`<button type="button" data-act="seg" data-key="${esc(f.k)}" data-v="${esc(o)}" class="${cur===o?'on':''}" aria-pressed="${cur===o}">${esc(o)}</button>`).join('')}</div></div>`;
+    return `<div class="${cls}">${lab}<div class="seg${!cur&&!f.opt?' empty':''}" role="group">${f.opts.map(o=>`<button type="button" data-act="seg" data-key="${esc(f.k)}" data-v="${esc(o)}" class="${cur===o?'on':''}" aria-pressed="${cur===o}">${esc(o)}</button>`).join('')}</div></div>`;
   }
   if(f.type==='checks'){
     const arr=Array.isArray(v)?v:[];
@@ -524,9 +602,9 @@ function fieldHTML(f){
     return `<div class="${cls}"><label for="${id}">${esc(f.label)}${empty?' <span class="need">· uzupełnij</span>':''}</label><select id="${id}" data-key="${esc(f.k)}" class="${empty?'empty':''}"><option value="">— wybierz —</option>${f.opts.map(o=>`<option ${s===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
   }
   const dl=f.dl?`<datalist id="dl_${id}">${f.dl.map(o=>`<option value="${esc(o)}">`).join('')}</datalist>`:'';
-  const inp=`<input type="text" id="${id}" data-key="${esc(f.k)}" value="${esc(s)}" ${f.type==='num'?'inputmode="decimal"':''} ${f.dl?`list="dl_${id}"`:''} placeholder="${esc(f.ph||'')}" class="${empty&&!f.ph?'empty':''}" autocomplete="off">`;
+  const inp=`<input type="text" id="${id}" data-key="${esc(f.k)}" value="${esc(s)}" ${f.type==='num'?'inputmode="decimal"':''} ${f.dl?`list="dl_${id}"`:''} placeholder="${esc(f.ph||'')}" class="${empty&&!f.ph&&!f.opt?'empty':''}" autocomplete="off">`;
   const brak=f.type==='brak'?`<button type="button" class="mini" data-act="brak" data-key="${esc(f.k)}">brak</button>`:'';
-  return `<div class="${cls}"><label for="${id}">${esc(f.label)}${empty&&!f.ph?' <span class="need">· uzupełnij</span>':''}${empty&&f.ph?' <span class="note">(domyślnie: '+esc(f.ph)+')</span>':''}</label><div class="unit">${inp}${f.unit?`<span>${f.unit}</span>`:''}${brak}</div>${dl}</div>`;
+  return `<div class="${cls}"><label for="${id}">${esc(f.label)}${empty&&!f.ph&&!f.opt?' <span class="need">· uzupełnij</span>':''}${empty&&f.ph?' <span class="note">(domyślnie: '+esc(f.ph)+')</span>':''}</label><div class="unit">${inp}${f.unit?`<span>${f.unit}</span>`:''}${brak}</div>${dl}</div>`;
 }
 function sitesHTML(code,t){
   const row=(f,lab)=>`<div>${lab}</div>`+SITES.map(x=>{const k='T|'+code+'|'+t+'|'+f+x;const s=str(getVal(k));return `<input type="text" inputmode="decimal" data-key="${k}" value="${esc(s)}" aria-label="${lab} ${x} ząb ${t}" class="${s?'':'empty'}">`;}).join('');
@@ -557,6 +635,7 @@ function odoHTML(code,mode){
 function needShared(){const ex=state.codes.some(c=>D[c].exam), hig=state.codes.some(c=>D[c].hig), ins=state.codes.some(c=>D[c].instr);return {ex,hig,ins};}
 function sharedCard(){
   const {ex,hig,ins}=needShared(); const f=[{k:'sh.age',label:'Wiek pacjenta',type:'num',unit:'lat',w:'s'}];
+  {const a=AGE();if(a!==null&&a>=18)f.push({k:'sh.preg',label:'Ciąża lub połóg (wycena ×1,2)',type:'seg',opts:['tak','nie'],opt:true,rer:'shared'});}
   if(ex) f.push(...examFields()); else if(hig){f.push({k:'sh.api',label:'API',type:'num',unit:'%',w:'s'},{k:'sh.gi',label:'GI (Löe–Silness)',type:'num',w:'s'});}
   let insH='';
   if(ins){const g=ageGroup();
@@ -573,7 +652,7 @@ function cardHTML(code){
   const fields=d.fields?d.fields():[];
   const warns=d.warn?d.warn():[];
   const mn=nfzMin(code);const cz=parseFloat(String(state.a[code+'.czas']||'').replace(',','.'));
-  let h=`<section class="card" id="card-${code}"><h2><span class="code">${code}</span>${esc(d.name)}<span class="icd">${esc(icdOf(code))}</span>${mn?`<span class="mintime${!isNaN(cz)&&cz<mn?' bad':''}">min. NFZ ${mn} min</span>`:''}</h2>`;
+  let h=`<section class="card" id="card-${code}"><h2><span class="code">${code}</span>${esc(d.name)}<span class="icd">${esc(icdOf(code))}</span>${PTS[code]!=null?`<span class="pts" title="wycena z katalogu NFZ, przed współczynnikami">${esc(ptsLabel(code))}</span>`:''}${mn?`<span class="mintime${!isNaN(cz)&&cz<mn?' bad':''}">min. NFZ ${mn} min</span>`:''}</h2>`;
   const ni=nfzIssues();ni.err.filter(e=>e.codes.includes(code)).forEach(e=>{h+=`<div class="err"><b>Błąd NFZ:</b> ${esc(e.msg)}</div>`;});
   if(NFZ_LIMIT[code])h+=`<ul class="tips"><li>Limit NFZ: ${esc(NFZ_LIMIT[code])}</li></ul>`;
   if(d.tips&&d.tips.length) h+=`<ul class="tips">${d.tips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
@@ -604,7 +683,7 @@ function renderSteps(){
 function renderBar(){
   const b=$('#bar');
   if(state.step===1){const ne1=nfzIssues().err.length;b.innerHTML=`<div class="in"><span class="miss">${state.codes.length?`Wybrano <b style="color:var(--accent)">${state.codes.length}</b> ${plural(state.codes.length,'kod','kody','kodów')}`:'Wybierz kody zabiegów'}${ne1?` · <b style="color:var(--fill)">Błędy NFZ: ${ne1}</b>`:''}</span><button type="button" class="btn" data-act="step" data-n="2" ${state.codes.length?'':'disabled'}>Dalej: pytania →</button></div>`;return;}
-  const m=missCount();refreshNfz();const ne=nfzIssues().err.length;const neTxt=ne?` · <b style="color:var(--fill)">Błędy NFZ: ${ne}</b>`:'';
+  const m=missCount();refreshNfz();const ne=nfzIssues().err.length;const P=nfzPoints();const neTxt=(ne?` · <b style="color:var(--fill)">Błędy NFZ: ${ne}</b>`:'')+(P.rows.length?` · Wycena: <b style="color:var(--accent)">${fmtP(P.total)} pkt</b>`:'');
   if(state.step===2){b.innerHTML=`<div class="in"><span class="miss${m?'':' okk'}">${m?`Do uzupełnienia: <b>${m}</b> ${plural(m,'pole','pola','pól')}`:'<b>Wszystko uzupełnione</b>'}${neTxt}</span><div class="row"><button type="button" class="btn ghost" data-act="step" data-n="1">← Kody</button><button type="button" class="btn" data-act="step" data-n="3">Generuj opis →</button></div></div>`;return;}
   b.innerHTML=`<div class="in"><span class="miss${m?'':' okk'}">${m?`W opisie zostało <b>${m}</b> ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ]`:'<b>Opis kompletny</b>'}${neTxt}</span><div class="row"><button type="button" class="btn ghost" data-act="step" data-n="2">← Pytania</button><button type="button" class="btn ghost" data-act="reset" id="resetBtn">Nowy pacjent</button><button type="button" class="btn" data-act="copyall">Kopiuj wszystko</button></div></div>`;
 }
@@ -621,10 +700,10 @@ function renderStep1(){
   ${state.unknown.length?`<div class="warn">Brak w bazie: ${state.unknown.map(esc).join(', ')}. Dostępne kody są poniżej.</div>`:''}
   <div class="group"><h3>Wybrane procedury (w tej kolejności powstanie opis)</h3><div class="sel-list">${sel||'<span class="note">Nic jeszcze nie wybrano.</span>'}</div></div>
   ${nfzBox()}
-  ${GROUPS.map(([g,cs])=>`<div class="group"><h3>${g}</h3><div class="chips">${cs.map(c=>`<button type="button" class="chip${has(c)?' on':''}" data-act="code" data-c="${c}" aria-pressed="${has(c)}">${c}<small>${esc(D[c].name)}</small></button>`).join('')}</div></div>`).join('')}
+  ${GROUPS.map(([g,cs])=>`<div class="group"><h3>${g}</h3><div class="chips">${cs.map(c=>`<button type="button" class="chip${has(c)?' on':''}" data-act="code" data-c="${c}" aria-pressed="${has(c)}">${c}<small>${esc(D[c].name)}</small>${PTS[c]!=null?`<span class="pts">${esc(ptsLabel(c))}</span>`:''}</button>`).join('')}</div></div>`).join('')}
   </section>`;
 }
-function renderStep2(){return nfzBox()+sharedCard()+state.codes.map(cardHTML).join('');}
+function renderStep2(){return nfzBox()+sharedCard()+state.codes.map(cardHTML).join('')+ptsExtraCard();}
 function renderStep3(){
   const outs=buildOut();
   const rows=state.codes.map(c=>{const d=D[c];let where='—';
@@ -632,13 +711,14 @@ function renderStep3(){
     else if(d.diag){if(d.diag.mode==='quad')where=(state.quads[c]||[]).length?'ćwiartki '+(state.quads[c]||[]).slice().sort().join(', '):'—';else{const ts=teethOf(c);where=ts.length?ts.map(t=>{const s=surfOf(c,t);return t+(d.diag.mode==='surf'&&s.length?' '+SORD.filter(x=>s.includes(x)).join(''):'');}).join(', '):'—';}}
     const mn=nfzMin(c);return `<tr><td class="m">${c}</td><td>${esc(icdOf(c))}</td><td class="m">${esc(where)}</td><td class="m">${mn?mn+' min'+(nfzPackages(c)>1?` (${nfzPackages(c)}×${NFZ_MIN[c]})`:''):'—'}</td><td class="m">${aotEst(c)?'~'+aotEst(c)+' min':'—'}</td></tr>`;}).join('');
   const m=missCount();
-  const all=`<section class="card"><div class="out-head"><h2>Cały opis – wszystkie zabiegi razem</h2><button type="button" class="btn" data-act="copyall">Kopiuj cały opis (${outs.length} ${plural(outs.length,'zabieg','zabiegi','zabiegów')})</button></div>${m?`<div class="warn">Uwaga: w opisie ${m===1?'zostało':'zostały'} ${m} ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ].</div>`:''}<div class="out all">${htmlOut(outs.map(o=>o.text).join('\n\n'))}</div></section>`;
+  const P=nfzPoints();
+  const all=`<section class="card"><div class="out-head"><h2>Cały opis – wszystkie zabiegi razem</h2><div class="acts">${P.rows.length?`<a class="pts-total" href="#pts-card" title="Szczegóły wyceny poniżej">Wycena wizyty: ${fmtP(P.total)} pkt</a>`:''}<button type="button" class="btn" data-act="copyall">Kopiuj cały opis (${outs.length} ${plural(outs.length,'zabieg','zabiegi','zabiegów')})</button></div></div>${m?`<div class="warn">Uwaga: w opisie ${m===1?'zostało':'zostały'} ${m} ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ].</div>`:''}<div class="out all">${htmlOut(outs.map(o=>o.text).join('\n\n'))}</div></section>`;
   const sum=`<section class="card"><h2>Do diagramu i rozliczenia</h2><p class="note" style="margin:0 0 8px">Ściąga do wpisania w programie gabinetu – nie trafia do kopiowanego opisu.</p><div style="overflow-x:auto"><table class="sum"><thead><tr><th>Kod</th><th>ICD-10 wg pliku</th><th>Zaznaczone na diagramie</th><th>Min. czas NFZ</th><th>Orientacyjnie (wycena AOTMiT)</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
   const each=`<div class="group" style="margin:18px 0 8px"><h3>Poszczególne zabiegi osobno</h3></div>`+outs.map((o,i)=>`<section class="card"><div class="out-head"><h2><span class="code">${o.code}</span>${esc(D[o.code].name)}</h2><button type="button" class="btn sm" data-act="copy" data-i="${i}">Kopiuj</button></div><div class="out" id="out-${i}">${htmlOut(o.text)}</div></section>`).join('');
   const est=state.codes.reduce((n,c)=>n+(aotEst(c)||nfzMin(c)||0),0);
   const noData=state.codes.filter(c=>!aotEst(c)&&!nfzMin(c));
   const sum2=sum.replace('</table></div></section>',`</table></div><p class="note" style="margin:8px 0 0">„Min. czas NFZ” – wymóg z Zarządzenia 95/2026/DSOZ (tylko pakiety ST30–ST30G). „Orientacyjnie” – czas przyjęty przez ekspertów NIL do wyceny AOTMiT (WT.5403.33.2021), nie jest wymogiem. Szacunek całej wizyty: <b>~${est} min</b>${noData.length?` + ${noData.join(', ')} (brak danych o czasie)`:''}. NFZ weryfikuje czasy względem godzin pracy lekarza zgłoszonych do umowy.</p></section>`);
-  return nfzBox()+all+sum2+each;
+  return nfzBox()+all+ptsCard()+sum2+each;
 }
 function render(){
   renderSteps();
@@ -648,6 +728,7 @@ function render(){
 function rerenderCard(code){
   if(state.step!==2){render();return;}
   const id=code==='shared'?'card-shared':'card-'+code; const el=document.getElementById(id);
+  if(code==='pts'){if(el){const tmp=document.createElement('div');tmp.innerHTML=ptsExtraCard();if(tmp.firstElementChild)el.replaceWith(tmp.firstElementChild);}return;}
   if(el){const tmp=document.createElement('div');tmp.innerHTML=code==='shared'?sharedCard():cardHTML(code);el.replaceWith(tmp.firstElementChild);}
   else render();
   renderBar();
