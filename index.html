@@ -115,6 +115,11 @@ table.sum{border-collapse:collapse;width:100%;font-size:13.5px}
 table.sum th,table.sum td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
 table.sum th{color:var(--muted);font-weight:600;font-size:12.5px}
 table.sum td.m{font-family:var(--font-mono)}
+.err{background:var(--fill-soft);color:var(--fill);border:1px solid var(--fill);border-radius:8px;padding:8px 10px;font-size:13.5px;margin:8px 0}
+.nfz{margin:0 0 14px}.nfz .err,.nfz .warn{margin:6px 0}
+.nfz-src{font-size:12px;color:var(--muted);margin-top:4px}
+.mintime{font-family:var(--font-mono);font-size:12.5px;border-radius:6px;padding:1px 7px;background:var(--warn-soft);color:var(--warn)}
+.mintime.bad{background:var(--fill-soft);color:var(--fill)}
 .plans{border:1px solid var(--accent);background:var(--accent-soft);border-radius:var(--r);padding:12px 14px;margin:12px 0 4px}
 .plans-h{margin:0 0 8px;font-size:15px}
 .plan-row{display:grid;grid-template-columns:190px minmax(0,1fr);gap:8px 12px;align-items:center;padding:8px 0}
@@ -149,7 +154,7 @@ table.sum td.m{font-family:var(--font-mono)}
 <div class="toast" id="toast" role="status"></div>
 <textarea id="clip" aria-hidden="true" style="position:fixed;left:-9999px;top:0;opacity:0"></textarea>
 
-<script src="szablony.js?v=2026-11-15-5"></script>
+<script src="szablony.js?v=2026-11-15-6"></script>
 <script>
 
 /* ---------- stan ---------- */
@@ -309,19 +314,21 @@ const D={
      else if(tx.startsWith('ekstyrpacja'))o.push('Pacjent skarży się na okresowe bóle samoistne od dłuższego czasu od zęba po urazie, zapalenie miazgi nieodwracalne podjęto decyzję o  '+V('ST28.endo','ekstyrpacja / leczenie endodontyczne')+' zęba '+T);
      else o.push('Brak reakcji miazgi dla zęba po urazie. Dla reszty badanych zębów reakcja prawidłowa.  Głęboko poddziąsłowe złamanie ścianek zęba '+T+' Podjęto decyzje o ekstrakcji.');
      return o.join('\n');}},
- ST30:{name:'Usunięcie złogów twardych z ½ łuku',icd:'K03.6 Złogi nazębne',tips:['1× w roku kalendarzowym','1× ST30 = ½ łuku → 2 ćwiartki','u małych dzieci skaler na małych obrotach','nie wolno już użyć ST30E dla tych ćwiartek'],hig:true,
+ ST30:{name:'Usunięcie złogów twardych z ½ łuku',icd:'K03.6 Złogi nazębne',tips:['1× w roku kalendarzowym','1 pakiet ST30 = ½ łuku = 1 ćwiartka (kolejne pakiety na wizycie ×0,8)','u małych dzieci skaler na małych obrotach','nie wolno już użyć ST30E dla tych ćwiartek'],hig:true,
    diag:{mode:'quad',label:'Kliknij ząb w ćwiartce, z której usunięto kamień (zaznacza całą ćwiartkę)'},
-   fields:()=>[{k:'ST30.czas',label:'Czas procedury',type:'num',unit:'min',w:'s'}],
-   warn:()=>{const q=state.quads.ST30||[];const a=AGE();if(a!==null&&a<5)return ['W szablonie dla pacjentów poniżej 5 r.ż. zamiast ST30 (skaler) jest ST30E – higienizacja złogów miękkich ½ łuku.'];return q.length&&q.length%2?['Zaznaczono '+q.length+' ćwiartki – 1× ST30 obejmuje 2 ćwiartki (½ łuku).']:(q.length>2?['Zaznaczono '+q.length+' ćwiartki = '+(q.length/2)+'× ST30.']:[]);},
+   fields:()=>[{k:'ST30.czas',label:'Czas procedury (min. NFZ '+nfzMin('ST30')+' min)',type:'num',unit:'min',w:'s'}],
+   warn:()=>{const q=state.quads.ST30||[];const a=AGE();const w=[];if(a!==null&&a<5)w.push('W szablonie dla pacjentów poniżej 5 r.ż. zamiast ST30 (skaler) jest ST30E – higienizacja złogów miękkich ½ łuku.');
+     if(q.length>1)w.push('Zaznaczono '+q.length+' ćwiartki = '+q.length+' pakiety ST30 → min. '+(q.length*10)+' min (NFZ: 10 min na pakiet).');
+     if(q.length===4)w.push('Całe uzębienie można alternatywnie rozliczyć jako ST30A (min. 40 min); ST30A nie łączy się z ST30.');return w;},
    render:()=>{const q=(state.quads.ST30||[]).slice().sort();return ['USUNIĘCIE ZŁOGÓW NAZĘBNYCH TWARDYCH Z 1/2 ŁUKU ZĘBOWEGO (ST30)',
      'W badaniu przedmiotowym stwierdzono obecność zmineralizowanych, twardych złogów nazębnych naddziąsłowych i poddziąsłowych (kamienia nazębnego) w kwadrantach jamy ustnej '+(q.length?q.join(', '):MISS('ćwiartki (diagram)'))+' – zgodnie z diagramem;',
      'Ocena stanu higieny jamy ustnej:',apiLine(),giLine(),SEG.ST30_A,SEG.ZAL_BODY,'Wskazano termin wizyty kontrolnej. Czas wykonania procedury '+V('ST30.czas','czas')+' min.'].join('\n');}},
- ST30G:{name:'Profesjonalna higienizacja – całe uzębienie',icd:'K03.6 + Z01.2',tips:['1× w roku kalendarzowym','20 min','dokładny diagram'],exam:true,instr:true,
-   fields:()=>[{k:'ST30G.czas',label:'Czas procedury',type:'num',unit:'min',w:'s'}],
+ ST30G:{name:'Profesjonalna higienizacja – całe uzębienie',icd:'K03.6 + Z01.2',tips:['dokładny diagram','dla dzieci i młodzieży do 18 r.ż.'],exam:true,instr:true,
+   fields:()=>[{k:'ST30G.czas',label:'Czas procedury (min. NFZ '+nfzMin('ST30G')+' min)',type:'num',unit:'min',w:'s'}],
    render:()=>['PROFESJONALNA HIGIENIZACJA BEZ INSTRUKTAŻU HIGIENY CAŁE UZĘBIENIE (ST30G)',SEG.ST30G_HEAD,SEG.ST30G_EXAM_A,examMid(),SEG.EXAM_B,SEG.ST30G_REMOVAL,'Czas wykonania procedury '+V('ST30G.czas','czas')+' min.',SEG.INSTR_HEAD,instr()].join('\n')},
- ST30E:{name:'Profesjonalna higienizacja – ½ łuku',icd:'K03.6 + Z01.2',tips:['bez instruktażu higieny','szablon dla pacjentów poniżej 5 r.ż.','wg pliku: zaznaczamy 4 ćwiartki'],exam:true,
+ ST30E:{name:'Profesjonalna higienizacja – ½ łuku',icd:'K03.6 + Z01.2',tips:['bez instruktażu higieny','szablon dla pacjentów poniżej 5 r.ż.','1 pakiet = ½ łuku = 1 ćwiartka; NFZ: max 4× w roku'],exam:true,
    diag:{mode:'quad',label:'Kliknij ząb w ćwiartce, z której usunięto złogi miękkie (zaznacza całą ćwiartkę)'},
-   fields:()=>[{k:'ST30E.czas',label:'Czas procedury',type:'num',unit:'min',w:'s'}],
+   fields:()=>[{k:'ST30E.czas',label:'Czas procedury (min. NFZ '+nfzMin('ST30E')+' min)',type:'num',unit:'min',w:'s'}],
    render:()=>{const q=(state.quads.ST30E||[]).slice().sort();const rem=SEG.ST30G_REMOVAL.replace('w kwadrantach jamy ustnej – zgodnie z diagramem','w kwadrantach jamy ustnej '+(q.length?q.join(', '):MISS('ćwiartki (diagram)'))+' – zgodnie z diagramem');
      return ['PROFESJONALNA HIGIENIZACJA BEZ INSTRUKTAŻU HIGIENY ½ ŁUKU ZĘBOWEGO (ST30E)',SEG.ST30E_HEAD,SEG.ST30G_EXAM_A,examMid(),SEG.EXAM_B,rem,'Czas wykonania procedury '+V('ST30E.czas','czas')+' min.'].join('\n');}},
  ST26:{name:'Leczenie zmian na błonie śluzowej',icd:'wg wariantu',tips:['przy ST28 – opis urazu (S00.5), bez ST28 – zapalenie dziąseł','zapalenie dziąseł: K05.1 / K05','afta: K12.0','nagryzienie: K13.1','uraz: S00.5','zapalenie warg: K13.0'],
@@ -429,6 +436,49 @@ const GROUPS=[
  ['Leczenie zachowawcze',['1108','1502','1503','1504','1505','1105','1206']],
  ['Chirurgia i przyzębie',['ST01','ST02','ST19','ST04']]];
 
+/* ---------- reguły NFZ ----------
+   Źródło: Zarządzenie Prezesa NFZ nr 95/2026/DSOZ z 31.08.2026, zał. 2 (nowy zał. 1d do zarz. 60/2023/DSOZ),
+   rozliczanie od 1.09.2026; komunikat Centrali NFZ z 9.11.2026. */
+const NFZ_SRC='Źródło: Zarządzenie Prezesa NFZ nr 95/2026/DSOZ (zał. 2), rozliczanie od 1.09.2026; komunikat NFZ z 9.11.2026.';
+const NFZ_MIN={ST30:10,ST30E:5,ST30G:20};            // minuty na 1 pakiet
+const NFZ_NOSUM={                                      // „produkt nie sumuje się z…”
+ ST30:['1006','ST30A','ST30B','ST30C','ST30D','ST30E','ST30F','ST30G'],
+ ST30E:['1006','ST30','ST30A','ST30B','ST30C','ST30F','ST30G','ST33','ST33A','ST34','ST34A'],
+ ST30G:['1006','ST30','ST30A','ST30B','ST30C','ST30D','ST30E','ST30F','ST33','ST33A','ST34','ST34A']};
+// Czas przyjęty w wycenie AOTMiT (opracowanie WT.5403.33.2021, Tab. 3 – eksperci NIL). Orientacyjnie, NIE jest wymogiem NFZ.
+const AOT_MIN={ST01:30,ST02:35,ST04:45,ST19:25,ST26:20,ST28:30,ST33:25,ST34:20};
+function aotEst(c){const n=Math.max(1,teethOf(c).length);
+  if(c==='ST30')return 15*Math.max(1,(state.quads.ST30||[]).length);
+  if(c==='ST01'||c==='ST02'||c==='ST19')return AOT_MIN[c]*n;
+  if(c==='ST04'){const qs=new Set(teethOf('ST04').map(qd));return 45*Math.max(1,qs.size);}
+  return AOT_MIN[c]||null;}
+const NFZ_LIMIT={ST30E:'max 4× w roku',ST30G:'max 1× w roku',ST33:'1× w roku kalendarzowym'};
+function nfzPackages(c){if(c==='ST30'||c==='ST30E'){const q=(state.quads[c]||[]).length;return Math.max(1,q);}return 1;}
+function nfzMin(c){return NFZ_MIN[c]?NFZ_MIN[c]*nfzPackages(c):null;}
+function nfzIssues(){
+  const err=[],warn=[],cs=state.codes,a=AGE();
+  for(let i=0;i<cs.length;i++)for(let j=i+1;j<cs.length;j++){const x=cs[i],y=cs[j];
+    const k=(NFZ_NOSUM[x]||[]).includes(y)?x:((NFZ_NOSUM[y]||[]).includes(x)?y:null);
+    if(k){const o=k===x?y:x;err.push({codes:[x,y],msg:`${k} i ${o} nie mogą być rozliczone razem – pakiet ${k} „nie sumuje się” z ${o}.`});}}
+  Object.keys(NFZ_MIN).forEach(c=>{if(!has(c))return;const v=parseFloat(String(state.a[c+'.czas']||'').replace(',','.'));const mn=nfzMin(c);
+    if(!isNaN(v)&&v<mn)err.push({codes:[c],msg:`${c}: czas ${num(v)} min jest krótszy niż minimum NFZ ${mn} min${nfzPackages(c)>1?` (${nfzPackages(c)} pakiety × ${NFZ_MIN[c]} min)`:''}.`});});
+  ['ST30E','ST30G'].forEach(c=>{if(has(c)&&a!==null&&a>=18)err.push({codes:[c],msg:`${c}: pakiety profesjonalnej higienizacji (ST30D–ST30G) są przeznaczone dla dzieci i młodzieży do 18 r.ż.`});});
+  const tot=cs.reduce((n,c)=>n+(nfzMin(c)||0),0);
+  if(tot>30)warn.push({codes:[],msg:`Suma minimalnych czasów pakietów higienizacji / usuwania złogów to ${tot} min – więcej niż 30-minutowa wizyta.`});
+  if(cs.some(c=>NFZ_MIN[c])&&(a===null||a<18))warn.push({codes:[],msg:'U dzieci i młodzieży do 18 r.ż. usuwanie złogów – nie częściej niż 1× na 6 miesięcy (komunikat NFZ). Sprawdź datę poprzedniego zabiegu.'});
+  cs.forEach(c=>{if(NFZ_LIMIT[c])warn.push({codes:[c],msg:`${c}: limit NFZ – ${NFZ_LIMIT[c]}.`,soft:true});});
+  return {err,warn,tot};
+}
+function nfzBox(){
+  const {err,warn,tot}=nfzIssues();
+  const hard=warn.filter(w=>!w.soft);
+  if(!state.codes.length) return '<div id="nfz-box"></div>';
+  const timeLine=tot?`<div class="note">Minimalny czas wg NFZ dla wybranych pakietów: <b>${tot} min</b> (pozostałe kody – zarządzenie nie określa minimum).</div>`:'';
+  if(!err.length&&!hard.length&&!timeLine) return '<div id="nfz-box"></div>';
+  return `<div id="nfz-box" class="nfz">${err.map(e=>`<div class="err" role="alert"><b>Błąd NFZ:</b> ${esc(e.msg)}</div>`).join('')}${hard.map(w=>`<div class="warn">${esc(w.msg)}</div>`).join('')}${timeLine}${err.length||hard.length?`<div class="nfz-src">${esc(NFZ_SRC)}</div>`:''}</div>`;
+}
+function refreshNfz(){const el=document.getElementById('nfz-box');if(el){const t=document.createElement('div');t.innerHTML=nfzBox();el.replaceWith(t.firstElementChild);}}
+
 /* ---------- render pól ---------- */
 function fieldHTML(f){
   if(f.sites) return sitesHTML(f.code,f.t);
@@ -498,7 +548,10 @@ function cardHTML(code){
   const d=D[code];
   const fields=d.fields?d.fields():[];
   const warns=d.warn?d.warn():[];
-  let h=`<section class="card" id="card-${code}"><h2><span class="code">${code}</span>${esc(d.name)}<span class="icd">${esc(icdOf(code))}</span></h2>`;
+  const mn=nfzMin(code);const cz=parseFloat(String(state.a[code+'.czas']||'').replace(',','.'));
+  let h=`<section class="card" id="card-${code}"><h2><span class="code">${code}</span>${esc(d.name)}<span class="icd">${esc(icdOf(code))}</span>${mn?`<span class="mintime${!isNaN(cz)&&cz<mn?' bad':''}">min. NFZ ${mn} min</span>`:''}</h2>`;
+  const ni=nfzIssues();ni.err.filter(e=>e.codes.includes(code)).forEach(e=>{h+=`<div class="err"><b>Błąd NFZ:</b> ${esc(e.msg)}</div>`;});
+  if(NFZ_LIMIT[code])h+=`<ul class="tips"><li>Limit NFZ: ${esc(NFZ_LIMIT[code])}</li></ul>`;
   if(d.tips&&d.tips.length) h+=`<ul class="tips">${d.tips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
   h+=warns.map(w=>`<div class="warn">${esc(w)}</div>`).join('');
   if(fields.length) h+=`<div class="grid">${fields.map(fieldHTML).join('')}</div>`;
@@ -526,10 +579,10 @@ function renderSteps(){
 }
 function renderBar(){
   const b=$('#bar');
-  if(state.step===1){b.innerHTML=`<div class="in"><span class="miss">${state.codes.length?`Wybrano <b style="color:var(--accent)">${state.codes.length}</b> ${plural(state.codes.length,'kod','kody','kodów')}`:'Wybierz kody zabiegów'}</span><button type="button" class="btn" data-act="step" data-n="2" ${state.codes.length?'':'disabled'}>Dalej: pytania →</button></div>`;return;}
-  const m=missCount();
-  if(state.step===2){b.innerHTML=`<div class="in"><span class="miss${m?'':' okk'}">${m?`Do uzupełnienia: <b>${m}</b> ${plural(m,'pole','pola','pól')}`:'<b>Wszystko uzupełnione</b>'}</span><div class="row"><button type="button" class="btn ghost" data-act="step" data-n="1">← Kody</button><button type="button" class="btn" data-act="step" data-n="3">Generuj opis →</button></div></div>`;return;}
-  b.innerHTML=`<div class="in"><span class="miss${m?'':' okk'}">${m?`W opisie zostało <b>${m}</b> ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ]`:'<b>Opis kompletny</b>'}</span><div class="row"><button type="button" class="btn ghost" data-act="step" data-n="2">← Pytania</button><button type="button" class="btn ghost" data-act="reset" id="resetBtn">Nowy pacjent</button><button type="button" class="btn" data-act="copyall">Kopiuj wszystko</button></div></div>`;
+  if(state.step===1){const ne1=nfzIssues().err.length;b.innerHTML=`<div class="in"><span class="miss">${state.codes.length?`Wybrano <b style="color:var(--accent)">${state.codes.length}</b> ${plural(state.codes.length,'kod','kody','kodów')}`:'Wybierz kody zabiegów'}${ne1?` · <b style="color:var(--fill)">Błędy NFZ: ${ne1}</b>`:''}</span><button type="button" class="btn" data-act="step" data-n="2" ${state.codes.length?'':'disabled'}>Dalej: pytania →</button></div>`;return;}
+  const m=missCount();refreshNfz();const ne=nfzIssues().err.length;const neTxt=ne?` · <b style="color:var(--fill)">Błędy NFZ: ${ne}</b>`:'';
+  if(state.step===2){b.innerHTML=`<div class="in"><span class="miss${m?'':' okk'}">${m?`Do uzupełnienia: <b>${m}</b> ${plural(m,'pole','pola','pól')}`:'<b>Wszystko uzupełnione</b>'}${neTxt}</span><div class="row"><button type="button" class="btn ghost" data-act="step" data-n="1">← Kody</button><button type="button" class="btn" data-act="step" data-n="3">Generuj opis →</button></div></div>`;return;}
+  b.innerHTML=`<div class="in"><span class="miss${m?'':' okk'}">${m?`W opisie zostało <b>${m}</b> ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ]`:'<b>Opis kompletny</b>'}${neTxt}</span><div class="row"><button type="button" class="btn ghost" data-act="step" data-n="2">← Pytania</button><button type="button" class="btn ghost" data-act="reset" id="resetBtn">Nowy pacjent</button><button type="button" class="btn" data-act="copyall">Kopiuj wszystko</button></div></div>`;
 }
 function renderStep1(){
   const sel=state.codes.map(c=>`<span class="code">${c}<button type="button" data-act="rmcode" data-c="${c}" aria-label="usuń ${c}">×</button></span>`).join('');
@@ -543,21 +596,25 @@ function renderStep1(){
   </div>
   ${state.unknown.length?`<div class="warn">Brak w bazie: ${state.unknown.map(esc).join(', ')}. Dostępne kody są poniżej.</div>`:''}
   <div class="group"><h3>Wybrane procedury (w tej kolejności powstanie opis)</h3><div class="sel-list">${sel||'<span class="note">Nic jeszcze nie wybrano.</span>'}</div></div>
+  ${nfzBox()}
   ${GROUPS.map(([g,cs])=>`<div class="group"><h3>${g}</h3><div class="chips">${cs.map(c=>`<button type="button" class="chip${has(c)?' on':''}" data-act="code" data-c="${c}" aria-pressed="${has(c)}">${c}<small>${esc(D[c].name)}</small></button>`).join('')}</div></div>`).join('')}
   </section>`;
 }
-function renderStep2(){return sharedCard()+state.codes.map(cardHTML).join('');}
+function renderStep2(){return nfzBox()+sharedCard()+state.codes.map(cardHTML).join('');}
 function renderStep3(){
   const outs=buildOut();
   const rows=state.codes.map(c=>{const d=D[c];let where='—';
     if(d.diag&&d.diag.mode==='mixed'){const qs=(state.quads[c]||[]).slice().sort(),ts=teethOf(c);where=[qs.length?'ćwiartki '+qs.join(', '):'',ts.length?'zęby '+ts.join(', '):''].filter(Boolean).join('; ')||'—';}
     else if(d.diag){if(d.diag.mode==='quad')where=(state.quads[c]||[]).length?'ćwiartki '+(state.quads[c]||[]).slice().sort().join(', '):'—';else{const ts=teethOf(c);where=ts.length?ts.map(t=>{const s=surfOf(c,t);return t+(d.diag.mode==='surf'&&s.length?' '+SORD.filter(x=>s.includes(x)).join(''):'');}).join(', '):'—';}}
-    return `<tr><td class="m">${c}</td><td>${esc(icdOf(c))}</td><td class="m">${esc(where)}</td></tr>`;}).join('');
+    const mn=nfzMin(c);return `<tr><td class="m">${c}</td><td>${esc(icdOf(c))}</td><td class="m">${esc(where)}</td><td class="m">${mn?mn+' min'+(nfzPackages(c)>1?` (${nfzPackages(c)}×${NFZ_MIN[c]})`:''):'—'}</td><td class="m">${aotEst(c)?'~'+aotEst(c)+' min':'—'}</td></tr>`;}).join('');
   const m=missCount();
   const all=`<section class="card"><div class="out-head"><h2>Cały opis – wszystkie zabiegi razem</h2><button type="button" class="btn" data-act="copyall">Kopiuj cały opis (${outs.length} ${plural(outs.length,'zabieg','zabiegi','zabiegów')})</button></div>${m?`<div class="warn">Uwaga: w opisie ${m===1?'zostało':'zostały'} ${m} ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ].</div>`:''}<div class="out all">${htmlOut(outs.map(o=>o.text).join('\n\n'))}</div></section>`;
-  const sum=`<section class="card"><h2>Do diagramu i rozliczenia</h2><p class="note" style="margin:0 0 8px">Ściąga do wpisania w programie gabinetu – nie trafia do kopiowanego opisu.</p><div style="overflow-x:auto"><table class="sum"><thead><tr><th>Kod</th><th>ICD-10 wg pliku</th><th>Zaznaczone na diagramie</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+  const sum=`<section class="card"><h2>Do diagramu i rozliczenia</h2><p class="note" style="margin:0 0 8px">Ściąga do wpisania w programie gabinetu – nie trafia do kopiowanego opisu.</p><div style="overflow-x:auto"><table class="sum"><thead><tr><th>Kod</th><th>ICD-10 wg pliku</th><th>Zaznaczone na diagramie</th><th>Min. czas NFZ</th><th>Orientacyjnie (wycena AOTMiT)</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
   const each=`<div class="group" style="margin:18px 0 8px"><h3>Poszczególne zabiegi osobno</h3></div>`+outs.map((o,i)=>`<section class="card"><div class="out-head"><h2><span class="code">${o.code}</span>${esc(D[o.code].name)}</h2><button type="button" class="btn sm" data-act="copy" data-i="${i}">Kopiuj</button></div><div class="out" id="out-${i}">${htmlOut(o.text)}</div></section>`).join('');
-  return all+sum+each;
+  const est=state.codes.reduce((n,c)=>n+(aotEst(c)||nfzMin(c)||0),0);
+  const noData=state.codes.filter(c=>!aotEst(c)&&!nfzMin(c));
+  const sum2=sum.replace('</table></div></section>',`</table></div><p class="note" style="margin:8px 0 0">„Min. czas NFZ” – wymóg z Zarządzenia 95/2026/DSOZ (tylko pakiety ST30–ST30G). „Orientacyjnie” – czas przyjęty przez ekspertów NIL do wyceny AOTMiT (WT.5403.33.2021), nie jest wymogiem. Szacunek całej wizyty: <b>~${est} min</b>${noData.length?` + ${noData.join(', ')} (brak danych o czasie)`:''}. NFZ weryfikuje czasy względem godzin pracy lekarza zgłoszonych do umowy.</p></section>`);
+  return nfzBox()+all+sum2+each;
 }
 function render(){
   renderSteps();
