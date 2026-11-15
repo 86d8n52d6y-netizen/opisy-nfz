@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generator opisów NFZ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Plan: narzędzie gabinetowe — stepper u góry, karty zabiegów, odontogram FDI, gotowy tekst do skopiowania. */
+:root{
+  --bg:#f2f5f5; --surface:#ffffff; --ink:#15262a; --muted:#5a6b70; --line:#d3dddf;
+  --accent:#0b6a70; --accent-soft:#dbeeed; --accent-ink:#ffffff;
+  --fill:#c62828; --fill-soft:#fde7e5; --warn:#9a5b00; --warn-soft:#fff3dc; --ok:#2e7d4f;
+  --font-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --r:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1618; --surface:#162124; --ink:#e2ebeb; --muted:#93a6a9; --line:#2a3b3e;
+    --accent:#4db6b2; --accent-soft:#15393a; --accent-ink:#06191a;
+    --fill:#ff8a80; --fill-soft:#3b1e1d; --warn:#f2b35c; --warn-soft:#33270f; --ok:#6fcf97;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1618; --surface:#162124; --ink:#e2ebeb; --muted:#93a6a9; --line:#2a3b3e;
+  --accent:#4db6b2; --accent-soft:#15393a; --accent-ink:#06191a;
+  --fill:#ff8a80; --fill-soft:#3b1e1d; --warn:#f2b35c; --warn-soft:#33270f; --ok:#6fcf97;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 16px 120px}
+header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+h1{font-size:20px;margin:0;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+h1 small{display:block;font-size:13px;font-weight:400;color:var(--muted)}
+.steps{display:flex;gap:6px;flex-wrap:wrap}
+.steps button{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;cursor:pointer}
+.steps button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.steps button:disabled{opacity:.45;cursor:not-allowed}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 4px;font-size:17px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.code{font-family:var(--font-mono);font-weight:600;background:var(--accent-soft);color:var(--accent);padding:2px 8px;border-radius:6px;font-size:14px}
+.icd{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 7px}
+.tips{margin:6px 0 10px;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px}
+.tips li{font-size:12.5px;color:var(--muted);background:var(--bg);border-radius:6px;padding:3px 8px}
+.warn{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:7px 10px;font-size:13.5px;margin:8px 0}
+.grid{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end}
+.f{display:flex;flex-direction:column;gap:4px;min-width:140px}
+.f.s{min-width:90px;max-width:120px}.f.l{flex:1 1 320px}.f.full{flex:1 1 100%}
+.f>label,.f>.lab{font-size:12.5px;font-weight:600;color:var(--muted)}
+.lab .need{color:var(--fill);font-weight:600}
+input[type=text],select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:7px 9px;width:100%}
+input[type=text].empty,select.empty{border-color:var(--fill);background:var(--fill-soft)}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.unit{display:flex;align-items:center;gap:6px}.unit span{color:var(--muted);font-size:13px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{font:inherit;font-size:13.5px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:7px;padding:6px 10px;cursor:pointer}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.seg.empty button{border-color:var(--fill)}
+.btn{font:inherit;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:9px 16px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.sm{padding:5px 10px;font-size:13px;font-weight:500}
+.mini{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{font-family:var(--font-mono);font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:7px;padding:5px 9px;cursor:pointer;text-align:left}
+.chip small{font-family:var(--font-body);color:var(--muted);margin-left:6px}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.chip.on small{color:var(--accent-ink);opacity:.85}
+.group{margin-top:12px}.group h3{font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 2px}
+.sel-list{display:flex;flex-wrap:wrap;gap:6px;min-height:34px;align-items:center}
+.sel-list .code{display:inline-flex;align-items:center;gap:6px}
+.sel-list .code button{border:0;background:transparent;color:inherit;cursor:pointer;font-size:15px;line-height:1;padding:0}
+.note{font-size:13px;color:var(--muted)}
+/* odontogram */
+.odo{overflow-x:auto;margin:10px 0 4px;padding-bottom:4px}
+.odo-in{display:inline-flex;flex-direction:column;gap:2px;min-width:max-content}
+.odo-row{display:flex;justify-content:center;gap:2px}
+.odo-row.prim{opacity:.95}
+.odo-sep{width:10px;border-left:2px solid var(--line);margin:0 4px}
+.odo-mid{height:1px;background:var(--line);margin:4px 0}
+.tooth{display:flex;flex-direction:column;align-items:center;gap:1px;padding:2px;border-radius:6px;cursor:pointer;border:1px solid transparent;position:relative}
+.tooth .n{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);line-height:1}
+.tooth svg{display:block}
+.tooth svg polygon,.tooth svg rect{fill:var(--surface);stroke:var(--muted);stroke-width:1}
+.tooth.prim svg polygon,.tooth.prim svg rect{stroke-dasharray:2 1.5}
+.tooth.inq{background:var(--accent-soft)}
+.tooth.sel{background:var(--accent-soft);border-color:var(--accent)}
+.tooth.sel .n{color:var(--accent);font-weight:600}
+.tooth.sel::after{content:"✓";position:absolute;top:-6px;right:-4px;background:var(--accent);color:var(--accent-ink);border-radius:50%;width:15px;height:15px;font-size:10px;display:flex;align-items:center;justify-content:center}
+.tooth svg .on{fill:var(--accent)!important}
+.odo.surf .tooth svg polygon:hover,.odo.surf .tooth svg rect:hover{fill:var(--accent-soft)}
+.quadbar{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.legend{font-size:12px;color:var(--muted);margin-top:4px}
+.tooth-panel{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:10px}
+.tooth-panel h4{margin:0 0 8px;font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tnum{font-family:var(--font-mono);background:var(--accent);color:var(--accent-ink);border-radius:5px;padding:1px 7px}
+.sub{border-top:1px dashed var(--line);margin-top:12px;padding-top:10px}
+.sub h4{margin:0 0 8px;font-size:14px}
+.sites{display:grid;grid-template-columns:auto repeat(6,minmax(44px,60px));gap:4px 6px;align-items:center;font-size:12.5px}
+.sites input{padding:5px;text-align:center}
+.sites .h{color:var(--muted);text-align:center;font-family:var(--font-mono)}
+/* output */
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px;z-index:5}
+.bar .in{max-width:1080px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.miss{font-size:14px}.miss b{color:var(--fill)}.miss.okk b{color:var(--ok)}
+.out{white-space:pre-wrap;font-family:var(--font-body);font-size:14px;line-height:1.5;background:var(--bg);border-radius:8px;padding:12px;margin:10px 0 0;max-height:520px;overflow:auto;border:1px solid var(--line)}
+.out mark{background:var(--fill-soft);color:var(--fill);font-weight:600;border-radius:4px;padding:0 3px}
+.out-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+table.sum{border-collapse:collapse;width:100%;font-size:13.5px}
+table.sum th,table.sum td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+table.sum th{color:var(--muted);font-weight:600;font-size:12.5px}
+table.sum td.m{font-family:var(--font-mono)}
+.copyall{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--r);padding:14px 16px;margin-bottom:14px}
+.copyall p{margin:0;font-size:14px}
+.btn.big{font-size:16px;padding:12px 22px}
+.out.all{max-height:none}
+.toast{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion: reduce){.toast{transition:none}}
+.hidden{display:none!important}
+@media (max-width:520px){.f{min-width:120px}.card{padding:12px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Generator opisów zabiegów NFZ<small>Pacjent powyżej 5 r.ż. · wizyta 30 min · szablony z pliku gabinetu</small></h1>
+    <nav class="steps" id="steps"></nav>
+  </header>
+  <main id="main"></main>
+</div>
+<div class="bar" id="bar"></div>
+<div class="toast" id="toast" role="status"></div>
+<textarea id="clip" aria-hidden="true" style="position:fixed;left:-9999px;top:0;opacity:0"></textarea>
+
+<script src="szablony.js"></script>
+<script>
+
+/* ---------- stan ---------- */
+const state = { step:1, codes:[], a:{}, teeth:{}, quads:{}, unknown:[] };
+function initDefaults(){ state.a['ST30.czas']='21'; state.a['ST30G.czas']='21'; state.a['1206.canals']=[{}]; }
+initDefaults();
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const MISS=l=>'\u0001'+l+'\u0002';
+function getVal(key){
+  if(key.startsWith('T|')){const [,c,t,f]=key.split('|');return ((state.teeth[c]||{})[t]||{f:{}}).f[f];}
+  if(key.startsWith('R|')){const [,lk,i,f]=key.split('|');return ((state.a[lk]||[])[+i]||{})[f];}
+  return state.a[key];
+}
+function setVal(key,v){
+  if(key.startsWith('T|')){const [,c,t,f]=key.split('|');const o=((state.teeth[c]=state.teeth[c]||{})[t]=state.teeth[c][t]||{s:[],f:{}});o.f[f]=v;return;}
+  if(key.startsWith('R|')){const [,lk,i,f]=key.split('|');const arr=state.a[lk]=state.a[lk]||[];arr[+i]=arr[+i]||{};arr[+i][f]=v;return;}
+  state.a[key]=v;
+}
+const str=v=>(v===undefined||v===null)?'':(Array.isArray(v)?v:String(v).trim());
+function V(key,label){const v=str(getVal(key));return (Array.isArray(v)?v.length:v)?v:MISS(label);}
+function AGE(){const v=parseFloat(String(state.a['sh.age']||'').replace(',','.'));return isNaN(v)?null:v;}
+function num(v){return String(v).replace('.',',');}
+const has=c=>state.codes.includes(c);
+function plural(n,a,b,c){if(n===1)return a;const d=n%10,dd=n%100;return (d>=2&&d<=4&&!(dd>=12&&dd<=14))?b:c;}
+
+/* zęby */
+const qd=t=>{const d=Math.floor(t/10);return d<5?d:d-4;};
+const isPrim=t=>Math.floor(t/10)>=5;
+const isUpper=t=>[1,2,5,6].includes(Math.floor(t/10));
+const isAnt=t=>t%10<=3;
+const viewLeft=t=>[1,4,5,8].includes(Math.floor(t/10));
+function layout(t){
+  const vest=isAnt(t)?'W':'B', oral=isUpper(t)?'P':'L', c=isAnt(t)?'I':'O';
+  const mr=viewLeft(t);
+  return {top:isUpper(t)?vest:oral,bottom:isUpper(t)?oral:vest,left:mr?'D':'M',right:mr?'M':'D',center:c};
+}
+const SORD=['M','O','I','D','B','W','P','L'];
+const STEM={M:'mezjaln',O:'żując',I:'sieczn',D:'dystaln',B:'policzkow',W:'wargow',P:'podniebienn',L:'językow'};
+const SNAME={M:'mezjalna',O:'żująca',I:'sieczna',D:'dystalna',B:'policzkowa',W:'wargowa',P:'podniebienna',L:'językowa'};
+function surfText(arr){
+  const s=SORD.filter(x=>(arr||[]).includes(x)); if(!s.length) return '';
+  return s.map((x,i)=>STEM[x]+(i<s.length-1?'o':'ej')).join('-')+' ('+s.join('')+')';
+}
+function teethOf(code){const o=state.teeth[code]||{};return Object.keys(o).map(Number).sort(sortFDI);}
+function sortFDI(a,b){const qa=qd(a),qb=qd(b);if(qa!==qb)return qa-qb;if(isPrim(a)!==isPrim(b))return isPrim(a)?1:-1;return a-b;}
+function teethTxt(code,label){const t=teethOf(code);return t.length?t.join(', '):MISS(label||'zęby (diagram)');}
+function tv(code,t,f,label){return V('T|'+code+'|'+t+'|'+f,label+' – ząb '+t);}
+
+/* ---------- pola ---------- */
+const WEDZ=['Typ I – śluzówkowy','Typ II – dziąsłowy','Typ III – brodawkowy','Typ IV – przezbrodawkowy'];
+function examFields(){return [
+  {k:'sh.api',label:'API',type:'num',unit:'%',w:'s'},
+  {k:'sh.gi',label:'GI (Löe–Silness)',type:'num',w:'s'},
+  {k:'sh.wg',label:'Wędzidełko wargi górnej',type:'select',opts:WEDZ},
+  {k:'sh.wd',label:'Wędzidełko wargi dolnej',type:'select',opts:WEDZ},
+  {k:'sh.al',label:'Alergie',type:'brak'},
+  {k:'sh.ch',label:'Choroby ogólnoustrojowe',type:'brak'},
+  {k:'sh.lk',label:'Przyjmowane leki na stałe',type:'brak'}];}
+function matFields(p,code){
+  const m=str(getVal(p+'mat'));
+  const f=[{k:p+'mat',label:'Materiał',type:'seg',opts:['kompozyt','glassjonomer RIVA LC'],rer:code}];
+  if(m==='kompozyt') f.push({k:p+'name',label:'Nazwa kompozytu',type:'text'});
+  f.push({k:p+'color',label:'Kolor',type:'text',w:'s'});
+  return f;
+}
+function matText(p,style){
+  const m=str(getVal(p+'mat'));
+  if(!m) return MISS('materiał');
+  if(m==='kompozyt') return (style==='docx'?'kompozytowy ':'kompozyt ')+V(p+'name','nazwa kompozytu')+', kolor '+V(p+'color','kolor');
+  return (style==='docx'?'glassjonomerowy':'glassjonomer')+' RIVA LC, kolor '+V(p+'color','kolor');
+}
+function surfOf(code,t){return ((state.teeth[code]||{})[t]||{s:[]}).s;}
+function surfTxt(code,t){const s=surfText(surfOf(code,t));return s||MISS('powierzchnie – ząb '+t+' (kliknij na diagramie)');}
+
+/* ---------- wspólne fragmenty ---------- */
+function apiLine(){const v=str(state.a['sh.api']);return 'Wskaźnik obecności płytki nazębnej - wskaźnik API =  '+(v?num(v).replace('%','')+'%':MISS('API %'));}
+function giLine(){
+  const g=str(state.a['sh.gi']); if(!g) return 'Wskaźnik stanu dziąseł – GI - '+MISS('GI');
+  const n=parseFloat(g.replace(',','.')); let it='Umiarkowane zapalenie dziąseł';
+  if(!isNaN(n)) it = n===0?'Brak zapalenia dziąseł':n<=1?'Łagodne zapalenie dziąseł':n<=2?'Umiarkowane zapalenie dziąseł':'Ciężkie zapalenie dziąseł';
+  return 'Wskaźnik stanu dziąseł – GI - '+it+'  '+num(g);
+}
+function examMid(){return [apiLine(),giLine(),
+  'Wędzidełko warg górnej : '+V('sh.wg','wędzidełko górne'),
+  'Wędzidełko warg dolnej: '+V('sh.wd','wędzidełko dolne'),
+  'Wywiad:','Alergie – '+V('sh.al','alergie'),'Choroby ogólnoustrojowe – '+V('sh.ch','choroby ogólne'),'Przyjmowane leki na stałe – '+V('sh.lk','leki')].join('\n');}
+function ageGroup(){const a=AGE();if(a===null)return null;return a<4?'1–3':a<7?'4–6':a<11?'7–10':'≥11';}
+function instr(){
+  const g=ageGroup(); if(!g) return MISS('wiek pacjenta (wybór instruktażu)');
+  const p=[];
+  if(g==='1–3')p.push(SEG.AGE_1_3); else if(g==='4–6')p.push(SEG.AGE_4_6); else if(g==='7–10')p.push(SEG.AGE_7_10);
+  else{p.push(SEG.AGE_11);const m=state.a['sh.meth']||[];if(!m.length)p.push(MISS('metoda szczotkowania (Roll / Bass / Stillman)'));
+    if(m.includes('Roll'))p.push(SEG.AGE_11_ROLL);if(m.includes('Bass'))p.push(SEG.AGE_11_BASS);if(m.includes('Stillman'))p.push(SEG.AGE_11_STILL);}
+  if(state.a['sh.ortho']==='tak')p.push(SEG.ORTHO);
+  return p.join('\n');
+}
+function byAge(key,fn){const v=str(state.a[key]);if(v)return v;const a=AGE();return a===null?'':fn(a);}
+
+/* ---------- definicje kodów ---------- */
+const TITLE_1105='Kod 1105 (postępowanie przy obnażeniu i skaleczeniu miazgi – bezpośrednie pokrycie miazgi)';
+const EXT_REASONS=['znacznie zniszczony, odłamanie fragmentu zęba - nienadający się już do odbudowy','złamanie poddziąsłowe korony zęba','resorpcja fizjologiczna','wskazania ortodontyczne','widoczna przetoka przy ww. zębie, brak reakcji na chlorek etylu - ząb martwy','ropień podśluzówkowy - znaczne zniszczenie tkanek - ząb nienadający się do odbudowy','nieodwracalne zapalenie miazgi, samoistny, ciągły  ból zęba, reakcja na chlorek etylu wzmożona'];
+const EXT_ANEST=['przewodowe Dentocaine (40mg + 0,005mg)/ml 1 amp','miejscowe nasiękowe Dentocaine (40mg + 0,005mg)/ml 1 amp','miejscowe  powierzchniowe Mark3 20% benzokaina'];
+const PREP3=['Dentosept A Mini spray (do 4 r.ż )','Elgydium Clinic Cicalium (od 4 r.ż)','Curasept żel z chlorheksydyną 0,5% CHX  (od 7 r.ż)'];
+const prepByAge=a=>a<4?PREP3[0]:a<7?PREP3[1]:PREP3[2];
+const prep2ByAge=a=>a<4?PREP3[0]:PREP3[1];
+
+function fillCode(code,cfg){return {
+  name:cfg.name,icd:'K02 / K04 / K05 (wg rozpoznania)',tips:cfg.tips,
+  diag:{mode:'surf',label:'Zaznacz ząb i kliknij leczone powierzchnie'},
+  perTooth:t=>{const p='T|'+code+'|'+t+'|';const f=[];if(cfg.depth)f.push({k:p+'depth',label:'Próchnica',type:'seg',opts:['średnia','głęboka'],rer:code});return f.concat(matFields(p,code));},
+  warn:()=>{const w=[];teethOf(code).forEach(t=>{
+      if(cfg.prim===true&&!isPrim(t))w.push('Ząb '+t+' jest stały – kod 1108 dotyczy zębów mlecznych.');
+      if(cfg.prim===false&&isPrim(t))w.push('Ząb '+t+' jest mleczny – dla zębów mlecznych zwykle 1108.');
+      const n=surfOf(code,t).length; if(cfg.surf&&n&&!cfg.surf(n))w.push('Ząb '+t+': zaznaczono '+n+' pow. – '+cfg.surfMsg);});return w;},
+  render:()=>{const ts=teethOf(code);const out=[cfg.title];if(!ts.length)out.push(MISS('ząb (diagram)'));
+    ts.forEach(t=>out.push(cfg.body(t)));return out.join('\n');}
+};}
+function body15(code,big){return t=>{const p='T|'+code+'|'+t+'|';const d=str(getVal(p+'depth'));const u=big?'rozległego ubytku':'ubytku';
+  if(!d) return 'Ząb '+t+', próchnica '+MISS('średnia / głęboka – ząb '+t);
+  if(d==='średnia') return 'Ząb '+t+', próchnica średnia, ubytek na powierzchni '+surfTxt(code,t)+'.\nCałkowite opracowanie i odbudowa '+u+'. Założono materiał:\n'+matText(p,'user');
+  return 'Ząb '+t+', próchnica głęboka, ubytek na powierzchni '+surfTxt(code,t)+'.\nCałkowite opracowanie i odbudowa '+u+'. Założono materiał podkładowy Ionosit oraz materiał'+(big?':':'')+'\n'+matText(p,'user');};}
+
+const D={
+ ST33:{name:'Badanie lekarskie z instruktażem higieny',icd:'Z01.2 Badanie dentystyczne',tips:['1× w roku kalendarzowym','dokładny diagram','na diagramie: nie zaznaczamy'],exam:true,instr:true,
+   render:()=>['BADANIE LEKARSKIE STOMATOLOGICZNE, KTÓRE OBEJMUJE RÓWNIEŻ INSTRUKTAŻ HIGIENY JAMY USTNEJ (ST33)',SEG.EXAM_A,examMid(),SEG.EXAM_B,SEG.ZAL,SEG.INSTR_HEAD,instr()].join('\n')},
+ ST34:{name:'Badanie lekarskie kontrolne',icd:'Z01.2 (lub K03.6)',tips:['co 4 mies. i 1 dzień','na diagramie: nie zaznaczamy'],exam:true,
+   render:()=>['BADANIE LEKARSKIE KONTROLNE (ST34)',SEG.EXAM_A,examMid(),SEG.EXAM_B,SEG.ZAL].join('\n')},
+ ST28:{name:'Badanie i kontrola po urazie zęba',icd:'Z01.2 + S02.5 Złamanie zęba',tips:['w kolejnych 6 mies. możliwe kontrole: 3× ST34 z badaniem żywotności','dodaj osobno kod leczenia (wypełnienie / ekstyrpacja / ekstrakcja)'],exam:true,
+   diag:{mode:'teeth',label:'Zaznacz ząb po urazie i zęby sąsiednie badane chlorkiem etylu'},
+   perTooth:t=>{const p='T|ST28|'+t+'|';return [{k:p+'role',label:'Ząb',type:'seg',opts:['po urazie','sąsiedni'],rer:'ST28'},{k:p+'re',label:'Reakcja na chlorek etylu',type:'seg',opts:['prawidłowa','wzmożona','brak reakcji miazgi'],rer:'ST28'}];},
+   fields:()=>[{k:'ST28.cause',label:'Przyczyna urazu',type:'seg',opts:['upadek','uderzenie','upadek i nagryzienie na twardy przedmiot'],rer:'ST28'},
+      {k:'ST28.days',label:'Ile dni temu',type:'num',w:'s'}],
+   fields2:()=>{const f=[{k:'ST28.tx',label:'Rodzaj leczenia',type:'seg',opts:['brak (tylko badanie)','ząb z wypełnieniem – obnażenie miazgi','ząb z próchnicą – odbudowa','ekstyrpacja / endodoncja','ekstrakcja'],rer:'ST28',full:true}];
+      const tx=str(state.a['ST28.tx']);
+      if(tx&&!tx.startsWith('brak')) f.push({k:'ST28.lt',label:'Ząb leczony',type:'text',w:'s',ph:injured().join(', ')});
+      if(tx.startsWith('ząb z')){f.push({k:'ST28.ls',label:'Powierzchnie',type:'checks',opts:SORD.map(s=>({v:s,l:s+' – '+SNAME[s]})),rer:'ST28',full:true});f.push(...matFields('ST28.',"ST28"));}
+      if(tx.startsWith('ekstyrpacja'))f.push({k:'ST28.endo',label:'Decyzja',type:'seg',opts:['ekstyrpacji','leczeniu endodontycznym'],rer:'ST28'});
+      return f;},
+   warn:()=>{const w=[];const tx=str(state.a['ST28.tx']);if(tx.startsWith('ząb z'))w.push('Pamiętaj o dodaniu kodu wypełnienia ostatecznego.');if(tx.startsWith('ekstyrpacja'))w.push('Dodaj kod ekstyrpacji / leczenia endodontycznego i kod wypełnienia.');if(tx==='ekstrakcja')w.push('Dodaj kod ekstrakcji (ST01 / ST02).');return w;},
+   render:()=>{
+     const inj=injured(), all=teethOf('ST28');
+     const o=['BADANIE LEKARSKIE STOMATOLOGICZNE I KONTROLNE PO URAZIE ZĘBA (ST28)',SEG.EXAM_A,examMid(),SEG.EXAM_B,SEG.ZAL,SEG.ST28_INSTR,'BADANIE W ZWIĄZKU Z URAZEM:'];
+     o.push('Badanie po urazie zęba '+(inj.length?inj.join(', '):MISS('ząb po urazie (diagram)'))+' ('+V('ST28.cause','przyczyna urazu')+')  '+V('ST28.days','liczba dni')+' dni temu. Badanie żywotności chlorkiem etylu zębów:');
+     const ord=inj.concat(all.filter(t=>!inj.includes(t)));
+     if(!ord.length)o.push(MISS('zęby badane (diagram)'));
+     ord.forEach((t,i)=>{o.push((i+1)+') '+(inj.includes(t)?'ząb po urazie':'ząb sąsiedni')+' nr '+t+' -reakcja '+tv('ST28',t,'re','reakcja'));});
+     const tx=str(state.a['ST28.tx']); if(!tx){o.push(MISS('leczenie w związku z urazem'));return o.join('\n');}
+     if(tx.startsWith('brak'))return o.join('\n');
+     o.push('LECZENIE W ZWIĄZKU Z URAZEM:');
+     const T=str(state.a['ST28.lt'])||(inj.length?inj.join(', '):MISS('ząb leczony'));
+     const S=surfText(state.a['ST28.ls']||[])||MISS('powierzchnie');
+     if(tx.startsWith('ząb z wyp'))o.push('W wyniku urazu nastąpiło odłamanie fragmentu zęba, który uległ urazowi wraz z fragmentem wypełnienia w tym samym zębie. Pod wypełnieniem była próchnica wtórna.\nCałkowite opracowanie rozległego, głębokiego ubytku zęba '+T+' na powierzchni '+S+'. Podczas mechanicznego opracowania próchnicy nastąpiło obnażenie próchnicowe miazgi na bardzo małym fragmencie powierzchni. Pacjent nie podaje aby miał dolegliwości bólowe ze strony zęba. Przepłukano ubytek NaCl, założono Ca (OH)2 nietwardniejący Biopulp , potem twardniejący Ca (OH)2  Life, podkład Ionosit oraz materiał:\n'+matText('ST28.','docx')+'\nZalecana kontrola po 8 tygodniach, następnie 3,6,12,18 mc, w razie dolegliwości bólowych kontrola w gabinecie stomatologicznym.');
+     else if(tx.startsWith('ząb z pr'))o.push('W wyniku urazu nastąpiło odłamanie fragmentu zęba. Konieczność wykonania odbudowy zęba. Ząb '+T+', próchnica głęboka, ubytek na powierzchni '+S+'. Całkowite opracowanie i odbudowa ubytku. Założono materiał podkładowy Ionosit oraz materiał:\n'+matText('ST28.','docx'));
+     else if(tx.startsWith('ekstyrpacja'))o.push('Pacjent skarży się na okresowe bóle samoistne od dłuższego czasu od zęba po urazie, zapalenie miazgi nieodwracalne podjęto decyzję o  '+V('ST28.endo','ekstyrpacja / leczenie endodontyczne')+' zęba '+T);
+     else o.push('Brak reakcji miazgi dla zęba po urazie. Dla reszty badanych zębów reakcja prawidłowa.  Głęboko poddziąsłowe złamanie ścianek zęba '+T+' Podjęto decyzje o ekstrakcji.');
+     return o.join('\n');}},
+ ST30:{name:'Usunięcie złogów twardych z ½ łuku',icd:'K03.6 Złogi nazębne',tips:['1× w roku kalendarzowym','1× ST30 = ½ łuku → 2 ćwiartki','u małych dzieci skaler na małych obrotach','nie wolno już użyć ST30E dla tych ćwiartek'],hig:true,
+   diag:{mode:'quad',label:'Kliknij ząb w ćwiartce, z której usunięto kamień (zaznacza całą ćwiartkę)'},
+   fields:()=>[{k:'ST30.czas',label:'Czas procedury',type:'num',unit:'min',w:'s'}],
+   warn:()=>{const q=state.quads.ST30||[];return q.length&&q.length%2?['Zaznaczono '+q.length+' ćwiartki – 1× ST30 obejmuje 2 ćwiartki (½ łuku).']:(q.length>2?['Zaznaczono '+q.length+' ćwiartki = '+(q.length/2)+'× ST30.']:[]);},
+   render:()=>{const q=(state.quads.ST30||[]).slice().sort();return ['USUNIĘCIE ZŁOGÓW NAZĘBNYCH TWARDYCH Z 1/2 ŁUKU ZĘBOWEGO (ST30)',
+     'W badaniu przedmiotowym stwierdzono obecność zmineralizowanych, twardych złogów nazębnych naddziąsłowych i poddziąsłowych (kamienia nazębnego) w kwadrantach jamy ustnej '+(q.length?q.join(', '):MISS('ćwiartki (diagram)'))+' – zgodnie z diagramem;',
+     'Ocena stanu higieny jamy ustnej:',apiLine(),giLine(),SEG.ST30_A,SEG.ZAL_BODY,'Wskazano termin wizyty kontrolnej. Czas wykonania procedury '+V('ST30.czas','czas')+' min.'].join('\n');}},
+ ST30G:{name:'Profesjonalna higienizacja – całe uzębienie',icd:'K03.6 + Z01.2',tips:['1× w roku kalendarzowym','20 min','dokładny diagram'],exam:true,instr:true,
+   fields:()=>[{k:'ST30G.czas',label:'Czas procedury',type:'num',unit:'min',w:'s'}],
+   render:()=>['PROFESJONALNA HIGIENIZACJA BEZ INSTRUKTAŻU HIGIENY CAŁE UZĘBIENIE (ST30G)',SEG.ST30G_HEAD,SEG.ST30G_EXAM_A,examMid(),SEG.EXAM_B,SEG.ST30G_REMOVAL,'Czas wykonania procedury '+V('ST30G.czas','czas')+' min.',SEG.INSTR_HEAD,instr()].join('\n')},
+ ST26:{name:'Leczenie zmian na błonie śluzowej',icd:'wg wariantu',tips:['zapalenie dziąseł: K05.1 / K05','afta: K12.0','nagryzienie: K13.1','uraz: S00.5','zapalenie warg: K13.0'],
+   diag:{mode:'mixed',label:'Okolica zmiany – zaznacz ćwiartkę i/lub ząb'},
+   fields:()=>{const v=state.a['ST26.var']||[];const f=[{k:'ST26.var',label:'Wariant (można kilka)',type:'checks',full:true,rer:'ST26',opts:[{v:'zap',l:'Zapalenie dziąseł przy złogach (K05.1)'},{v:'uraz',l:'Uraz błony śluzowej / przy ST28 (S00.5)'},{v:'afta',l:'Afta (K12.0)'},{v:'nag',l:'Nagryzienie (K13.1)'},{v:'warg',l:'Zapalenie warg (K13.0)'}]}];
+     if(v.includes('zap'))f.push({k:'ST26.plyn',label:'Zapalenie – płukanie',type:'seg',opts:['Eludrilem','roztworem rozcieńczonej H2O2','roztworem nadmanganianu potasu'],rer:'ST26'});
+     if(v.includes('uraz')){f.push({k:'ST26.narz',label:'Uraz – przedmiotem',type:'seg',opts:['tępym','ostrym'],rer:'ST26'});f.push({k:'ST26.prepU',label:'Uraz – preparat',type:'seg',opts:PREP3.slice(0,2),rer:'ST26',age:prep2ByAge});}
+     if(v.includes('afta')){f.push({k:'ST26.afta',label:'Afta',type:'seg',opts:['Mikulicza','Suttona'],rer:'ST26'});f.push({k:'ST26.prepA',label:'Afta – preparat',type:'seg',opts:PREP3,rer:'ST26',age:prepByAge});}
+     if(v.includes('nag')){f.push({k:'ST26.lok',label:'Nagryzienie – okolica',type:'seg',opts:['wargi','policzka'],rer:'ST26'});f.push({k:'ST26.elg',label:'Nagryzienie – Elgydium Clinic Cicalium',type:'seg',opts:['tak','nie'],rer:'ST26',age:a=>a>=4?'tak':'nie'});}
+     return f;},
+   render:()=>{const v=state.a['ST26.var']||[];const o=['LECZENIE ZMIAN NA BŁONIE ŚLUZOWEJ JAMY USTNEJ (ST26)'];const T=st26Loc();const a=AGE();
+     if(!v.length)o.push(MISS('wariant ST26'));
+     const parts=[];
+     if(v.includes('zap'))parts.push('Zapalenie przyzębia, błony śluzowej żującej dziąseł oraz miejscowo błony śluzowej wyścielającej związane z licznymi złogami nazębnymi (obrzęk brodawek międzyzębowych, zaczerwienienie). Przepłukano jamę ustną '+V('ST26.plyn','płyn do płukania')+'. Zaaplikowano Curasept żel z chlorheksydyną 0,5% CHX na obszar tkanek błony śluzowej przyzębia wszystkich zębów po zabiegu usunięcia złogów nazębnych.\n'+SEG.ST26_ZAP_REST);
+     if(v.includes('uraz')){const p=byAge('ST26.prepU',prep2ByAge)||MISS('preparat');parts.push('POWIERZCHNIOWY URAZ WARGI I JAMY USTNEJ\nUszkodzenie błony śluzowej żującej dziąsła i błony śluzowej wyścielającej w okolicy wyrostka zębodołowego '+T+' poprzez uraz '+V('ST26.narz','tępym / ostrym')+' przedmiotem, mały krwiak podśluzówkowy, brzegi gładkie, dno czyste, bez cech ropnia. Tkanki w otoczeniu nieznacznie obrzęknięte, niebolesne przy dotyku. Brak objawów ogólnych i powiększenia węzłów chłonnych. Przepłukano zmieniony obszar roztworem 0,9% NaCl. Zaaplikowano na zmienioną urazowo tkankę '+p+'.\n'+SEG.ST26_URAZ_REST);}
+     if(v.includes('afta')){const p=byAge('ST26.prepA',prepByAge)||MISS('preparat');const rin=a===null?MISS('wiek (płukanie)'):a<6?'ciepłą wodą lub rumiankiem po posiłkach przez 7-14 dni (dzieci poniżej 6 r.ż.)':'roztworem chlorheksydyny 0,12% -0,2 % , 2× dziennie przez 7-14 dni (dzieci powyżej 6 r.ż.)';
+       parts.push('ZMIANA NA BŁONIE ŚLUZOWEJ WYŚCIELAJĄCEJ (AFTA)\nZmiana na błonie śluzowej wyścielającej w okolicy wyrostka zębodołowego '+T+' afta '+V('ST26.afta','Mikulicza / Suttona')+'. Przepłukano zmianę  roztworem 0,9% NaCl. Zaaplikowano '+p+' na zmienioną tkankę.\n'+SEG.ST26_AFTA_MID+'\nPłukanie jamy ustnej '+rin+'\n'+SEG.ST26_AFTA_END);}
+     if(v.includes('nag')){const e=byAge('ST26.elg',x=>x>=4?'tak':'nie');const rin=a===null?MISS('wiek (płukanie)'):a<6?'Płukanie jamy ustnej ciepłą wodą lub rumiankiem po posiłkach przez 7-14 dni ( dzieci poniżej 6 r.ż.)':'Płukanie jamy ustnej roztworem chlorheksydyny 0,12% -0,2 % , 2× dziennie przez 7-14 dni  (dzieci od 6 r.ż.)';
+       parts.push('URAZ BŁONY ŚLUZOWEJ WYŚCIELAJĄCEJ (NAGRYZIENIE)\nUraz błony śluzowej wyścielającej ('+V('ST26.lok','wargi / policzka')+'), okolicy wyrostka zębodołowego '+T+' poprzez nagryzienie, brzegi gładkie, dno czyste, bez cech ropnia. Tkanki w otoczeniu nieznacznie obrzęknięte, niebolesne przy dotyku. Brak objawów ogólnych i powiększenia węzłów chłonnych. Przepłukano zmieniony obszar roztworem 0,9% NaCl'+(e==='tak'?' oraz zastosowano Elgydium Clinic Cicalium (od 4 r.ż.)':(e?'':MISS('Elgydium tak / nie')))+' na urazowo zmienioną tkankę.\n'+SEG.ST26_NAG_MID+'\n'+rin+'\n'+SEG.ST26_NAG_END);}
+     if(v.includes('warg'))parts.push('ZAPALENIE WARG\n'+SEG.ST26_WARGI);
+     return o.concat(parts.length?[parts.join('\n\n')]:[]).join('\n');}},
+ '1101':{name:'Leczenie próchnicy powierzchniowej',icd:'K02.0 Próchnica ograniczona do szkliwa',tips:['zaznacz leczone zęby (zwykle 4–10)','te same zęby można powtarzać max 6× co 2 tyg.'],
+   diag:{mode:'teeth',label:'Zaznacz zęby, na które nałożono lakier fluorkowy'},
+   fields:()=>[{k:'1101.prep',label:'Lakier fluorkowy (preparat)',type:'text',dl:['VOCO Profluorid Varnish'],w:'l'}],
+   render:()=>['LECZENIE PRÓCHNICY POWIERZCHNIOWEJ (1101)','Próchnica początkowa na powierzchniach wargowych zębów '+teethTxt('1101','zęby leczone (diagram)')+' – zgodnie z diagramem.',SEG.T1101_A,
+     'Pola zabiegowe osuszono i przystąpiono do procedury leczniczej. Uzyskano pełną hemostazę (brak krwawienia z brzegu dziąsłowego). Na zmiany w powierzchniach ww. zębów, na których to powierzchniach nie było ubytków próchnicowych wymagających opracowania wiertłem i wypełnienia, zastosowano lakier fluorkowy ('+V('1101.prep','preparat')+'). Zalecana częstotliwość: mniej więcej co 2–4 tygodnie przez 2–3 miesiące lub dłużej - aż do ustąpienia objawów i poprawy wyglądu plamy próchnicowej (utrata matowości, powrót połysku).',
+     SEG.T1101_B,SEG.ZAL_BODY].join('\n')},
+ '1006':{name:'Lakierowanie zębów',icd:'Z29.8 Inne określone środki profilaktyczne',tips:['co 3 mies. i 1 dzień'],
+   render:()=>['LAKIEROWANIE ZĘBÓW (1006)',SEG.T1006].join('\n')},
+ '1105':fillCode('1105',{name:'Bezpośrednie pokrycie miazgi',title:TITLE_1105,tips:['kontrola po 8 tyg., potem 3, 6, 12, 18 mies.'],
+   body:t=>{const p='T|1105|'+t+'|';return 'Całkowite opracowanie rozległego, głębokiego ubytku zęba '+t+' na powierzchni '+surfTxt('1105',t)+'. Podczas mechanicznego opracowania próchnicy nastąpiło obnażenie próchnicowe miazgi na bardzo małym fragmencie powierzchni.\nPacjent nie podaje aby miał dolegliwości bólowe ze strony zęba. Przepłukano ubytek NaCl, założono Ca (OH)2 nietwardniejący Biopulp, potem twardniejący Ca (OH)2  Life, podkład Ionosit oraz materiał:\n'+matText(p,'docx')+'\nZalecana kontrola po 8 tygodniach, następnie 3,6,12,18 mc, w razie dolegliwości bólowych kontrola w gabinecie stomatologicznym.';}}),
+ '1108':fillCode('1108',{name:'Wypełnienie zęba mlecznego',title:'Kod 1108 (wypełnienie ubytku korony zęba mlecznego)',depth:true,prim:true,tips:['zęby mleczne'],
+   body:t=>{const p='T|1108|'+t+'|';const d=str(getVal(p+'depth'));
+     if(!d)return 'Ząb '+t+': '+MISS('próchnica średnia / głęboka – ząb '+t);
+     if(d==='średnia')return 'Wypełnienie ubytku korony zęba mlecznego '+t+', próchnica średnia, ubytek na powierzchni '+surfTxt('1108',t)+'. Całkowite opracowanie i odbudowa ubytku. Założono materiał:\n'+matText(p,'docx');
+     return 'Ząb '+t+', próchnica głęboka, ubytek na powierzchni '+surfTxt('1108',t)+'. Całkowite opracowanie i odbudowa ubytku. Założono materiał podkładowy Ionosit oraz materiał:\n'+matText(p,'docx');}}),
+ '1502':fillCode('1502',{name:'Odbudowa ubytku – 1 powierzchnia',title:'(1502) Całkowite opracowanie i odbudowa ubytku zęba na 1 powierzchni',depth:true,prim:false,tips:['zęby stałe'],surf:n=>n===1,surfMsg:'1502 to 1 powierzchnia.',body:body15('1502',false)}),
+ '1503':fillCode('1503',{name:'Odbudowa ubytku – 2 powierzchnie',title:'(1503) Całkowite opracowanie i odbudowa ubytku na 2 powierzchniach',depth:true,prim:false,tips:['zęby stałe'],surf:n=>n===2,surfMsg:'1503 to 2 powierzchnie.',body:body15('1503',false)}),
+ '1504':fillCode('1504',{name:'Rozległy ubytek – 2 powierzchnie',title:'(1504) Całkowite opracowanie i odbudowa rozległego ubytku na 2 powierzchniach',depth:true,prim:false,tips:['zęby stałe'],surf:n=>n===2,surfMsg:'1504 to 2 powierzchnie (rozległy).',body:body15('1504',true)}),
+ '1505':fillCode('1505',{name:'Rozległy ubytek – 3 powierzchnie',title:'(1505) Całkowite opracowanie i odbudowa rozległego ubytku na 3 powierzchniach',depth:true,prim:false,tips:['zęby stałe'],surf:n=>n>=3,surfMsg:'1505 to 3 powierzchnie.',body:body15('1505',true)}),
+ ST01:extCode('ST01','Kod ST01 (ekstrakcje zębów jednokorzeniowych)','Ekstrakcja zęba jednokorzeniowego'),
+ ST02:extCode('ST02','Kod ST02 (ekstrakcje zębów wielokorzeniowych w znieczuleniu miejscowym i założeniem opatrunku uciskowego)','Ekstrakcja zęba wielokorzeniowego'),
+ ST19:{name:'Nacięcie ropnia z drenażem',icd:'K04 / K05 (wg rozpoznania)',tips:['kontrola za 3–5 dni'],
+   diag:{mode:'teeth',label:'Zaznacz ząb, w okolicy którego był ropień'},
+   fields:()=>[{k:'ST19.zn',label:'Znieczulenie miejscowe powierzchniowe',type:'text',dl:['Mark3 20% benzokaina'],w:'l'}],
+   render:()=>['Kod ST19 (nacięcie powierzchniowo, podśluzówkowo lub podskórnie leżącego ropnia włącznie z drenażem i opatrunkie)',
+     'Ropień podśluzówkowy w okolicy zęba '+teethTxt('ST19','ząb (diagram)')+'. Obrzęk, zaczerwienienie błony śluzowej w okolicy zęba, doznania bólowe na opukiwania pionowe i poziome. Ze względu na doznania bólowe było wskazanie wykonania znieczulenia dedykowanego dla obszaru ropnia w celu jego drenażu, miejscowe powierzchniowe '+V('ST19.zn','znieczulenie')+'.',SEG.ST19_REST].join('\n')},
+ '1206':{name:'Ekstyrpacja przeżyciowa miazgi',icd:'K04 (wg rozpoznania)',tips:['opłaca się zamiast dewitalizacji, zgodnie z wiekiem – 2 lata przed fizjologicznym wypadaniem','I wizyta: 1206 × kanał + 1108','II wizyta: 1108 + ST26 / S00.5'],
+   diag:{mode:'surf',label:'Zaznacz ząb (na II wizycie także powierzchnie)'},
+   fields:()=>{const w=str(state.a['1206.wiz']);const f=[{k:'1206.wiz',label:'Wizyta',type:'seg',opts:['I – ekstyrpacja','II – odbudowa + uraz błony śluzowej'],rer:'1206'}];
+     if(w.startsWith('II')){f.push(...matFields('1206.',"1206"));f.push({k:'1206.narz',label:'Uraz – przedmiotem',type:'seg',opts:['tępym','ostrym'],rer:'1206'});f.push({k:'1206.prep',label:'Uraz – preparat',type:'seg',opts:PREP3,rer:'1206',age:prepByAge});}
+     return f;},
+   repeat:()=>str(state.a['1206.wiz']).startsWith('I ')||str(state.a['1206.wiz'])==='I – ekstyrpacja'?{k:'1206.canals',label:'Kanały',cols:[{f:'n',label:'Kanał',dl:['podniebienny','policzkowy bliższy','policzkowy dalszy','mezjalno-policzkowy','mezjalno-językowy','dystalny','pojedynczy']},{f:'d',label:'Dł. (mm)',w:'s'},{f:'m',label:'MAF',w:'s'}]}:null,
+   render:()=>{const w=str(state.a['1206.wiz']);const ts=teethOf('1206');const T=ts.length?ts.join(', '):MISS('ząb (diagram)');const o=['Kod 1206 (Ekstrypacja przeżyciowa miazgi)'];
+     if(!w){o.push(MISS('wizyta I / II'));return o.join('\n');}
+     if(w.startsWith('I –')){const cs=(state.a['1206.canals']||[]).filter(c=>c&&(c.n||c.d||c.m));
+       const ct=cs.length?cs.map(c=>(str(c.n)||MISS('nazwa kanału'))+' dł. '+(str(c.d)?num(c.d)+' mm':MISS('długość'))+', MAF '+(str(c.m)||MISS('MAF'))).join('; ')+'.':MISS('kanały: nazwa, długość, MAF');
+       o.push('Ząb '+T+' rozległy ubytek klasy okluzyjna. Pacjent zgłosił z bólem zęba, ząb dawał wcześniej okresowe, samoistne doznania bólowe. Od kilku dni jest to ciągły ból, wciąż narastający. Oczyszczono zęby z naddziąsłowych i poddziąsłowych złogów nazębnych, a następnie przystąpiono do właściwego zabiegu. Zachowana hemostaza - brak krwawienia. Reakcja na chlorek etylu wzmożona. Całkowite opracowanie ubytku, trepanacja komory, ekstyrpacja miazgociągiem miazgi kanałowej zęba. Chemo-mechaniczne opracowanie kanałów zębów: '+ct+' Przepłukano: podchloryn 2%, roztworem 0,9% NaCl , chlorheksydyna. Osuszono ćwiekami papierowymi: wypełniono kanały pastą jodoformową, założono materiał wypełniający koronę zęba, z wyboru glassjonomer RIVA LC A2, ze względu na  zniszczenie korony zęba. Wskazana kontrola radiologiczna i kliniczna na następnej wizycie za 3 mc.');}
+     else{const S=ts.length?ts.map(t=>surfText(surfOf('1206',t))).filter(Boolean).join(', ')||MISS('powierzchnie (diagram)'):MISS('powierzchnie (diagram)');const p=byAge('1206.prep',prepByAge)||MISS('preparat');
+       o.push('Ząb '+T+', próchnica głęboka, ubytek na powierzchni '+S+'. Oczyszczono zęby ze złogów nazębnych nadziąsłowych i poddziąsłowych, dopiero wtedy przystąpiono do leczenie zęba. Całkowite opracowanie i odbudowa ubytku. Założono materiał podkładowy Ionosit oraz materiał:\n'+matText('1206.','docx')+'\nUszkodzenie błony śluzowej żującej dziąsła i błony śluzowej wyścielającej w okolicy wyrostka zębodołowego zęba  '+T+' poprzez uraz '+V('1206.narz','tępym / ostrym')+' przedmiotem, mały krwiak podśluzówkowy, brzegi gładkie, dno czyste, bez cech ropnia. Tkanki w otoczeniu nieznacznie obrzęknięte, niebolesne przy dotyku. Brak objawów ogólnych i powiększenia węzłów chłonnych. Przepłukano zmieniony obszar roztworem 0,9% NaCl. Zaaplikowano na zmienioną urazowo tkankę '+p+'.\n'+SEG.E1206_II_REST);}
+     return o.join('\n');}},
+ ST04:{name:'Kiretaż zamknięty ¼ uzębienia',icd:'K05 (wg rozpoznania)',tips:['tylko od 15 r.ż.','stosujemy na 2 ćwiartkach'],
+   diag:{mode:'teeth',label:'Zaznacz zęby objęte kiretażem'},
+   fields:()=>[{k:'ST04.bop',label:'BoP',type:'num',unit:'%',w:'s'},{k:'sh.api',label:'API',type:'num',unit:'%',w:'s'}],
+   perTooth:t=>[{sites:true,code:'ST04',t}],
+   warn:()=>{const a=AGE();return a!==null&&a<15?['Wg szablonu kiretaż (ST04) tylko dla pacjentów od 15 r.ż.']:[];},
+   render:()=>{const o=['Kod ST04 (Kiretaż zwykły zamknięty w obrębie 1/4 uzębienia)',SEG.ST04_A];
+     const b=str(state.a['ST04.bop']);const ap=str(state.a['sh.api']);
+     o.push('Ocena krwawienia przy zgłębnikowaniu, współczynnik krwawienia BoP wynosi '+(b?num(b)+'%':MISS('BoP %'))+' Higiena – niedostateczna, zalecono poprawę, wskaźnik  API = '+(ap?num(ap)+'%':MISS('API %'))+'.');
+     const ts=teethOf('ST04');if(!ts.length)o.push(MISS('zęby (diagram)'));
+     ts.forEach((t,i)=>{const s=f=>SITES.map(x=>x+'= '+tv('ST04',t,f+x,f.toUpperCase()+' '+x)).join('   ');
+       o.push((i+1)+') Ząb  '+t,'Kieszonki dziąsłowe PD (mm) '+s('pd'),'CAL(mm) '+s('cal'));});
+     o.push(SEG.ST04_B);return o.join('\n');}}
+};
+const SITES=['MB','B','DB','LB','L','ML'];
+function st26Loc(){const ts=teethOf('ST26'),qs=(state.quads.ST26||[]).slice().sort();
+  if(ts.length)return (ts.length>1?'zębów ':'zęba ')+ts.join(', ');
+  if(qs.length)return (qs.length>1?'ćwiartek ':'ćwiartki ')+qs.join(', ');
+  return 'zęba '+MISS('ćwiartka lub ząb – okolica zmiany (diagram)');}
+function injured(){return teethOf('ST28').filter(t=>str(getVal('T|ST28|'+t+'|role'))==='po urazie');}
+function extCode(code,title,name){return {name,icd:'K02 / K04 / K05 (wg rozpoznania)',tips:['ST19 (nacięcie ropnia) dodaj osobno'],
+  diag:{mode:'teeth',label:'Zaznacz usunięte zęby'},
+  perTooth:t=>{const p='T|'+code+'|'+t+'|';const f=[{k:p+'why',label:'Wskazanie (można kilka)',type:'checks',opts:EXT_REASONS,full:true,rer:code},{k:p+'an',label:'Znieczulenie (można kilka)',type:'checks',opts:EXT_ANEST,full:true,rer:code}];
+    if(isUpper(t)&&t%10>=4)f.push({k:p+'zat',label:'Próba zatokowa',type:'seg',opts:['ujemna – wpisz','nie wpisuj'],rer:code});return f;},
+  render:()=>{const ts=teethOf(code);const o=[title];if(!ts.length)o.push(MISS('ząb (diagram)'));
+    ts.forEach(t=>{const p='T|'+code+'|'+t+'|';const why=getVal(p+'why')||[];const an=getVal(p+'an')||[];const z=str(getVal(p+'zat'));
+      o.push('Z wywiadu w dniu dzisiejszym brak przeciwwskazań do zabiegu usunięcia zęba '+t+' (ząb '+(why.length?why.join(', '):MISS('wskazanie – ząb '+t))+'). Oczyszczono zęby z naddziąsłowych i poddziąsłowych złogów nazębnych, a następnie przystąpiono do właściwego zabiegu. Zachowana hemostaza - brak krwawienia. Znieczulenie '+(an.length?an.join(', ')+'.':MISS('znieczulenie – ząb '+t))+' Ekstrakcja, ząb usunięto w całości. '+(z.startsWith('ujemna')?'(Próba zatokowa ujemna dla zęba '+t+'). ':'')+'Przeprowadzono toaletę rany, hemostaza prawidłowa, opatrunek uciskowy i wskazania.');});
+    o.push(SEG.EXT_ZAL);return o.join('\n');}};}
+
+const GROUPS=[
+ ['Badania',['ST33','ST34','ST28']],
+ ['Profilaktyka i higienizacja',['ST30','ST30G','1101','1006']],
+ ['Błona śluzowa',['ST26']],
+ ['Leczenie zachowawcze',['1108','1502','1503','1504','1505','1105','1206']],
+ ['Chirurgia i przyzębie',['ST01','ST02','ST19','ST04']]];
+
+/* ---------- render pól ---------- */
+function fieldHTML(f){
+  if(f.sites) return sitesHTML(f.code,f.t);
+  const v=getVal(f.k); const s=str(v);
+  const empty=(Array.isArray(s)?!s.length:!s);
+  const ageDef=f.age&&empty&&AGE()!==null?f.age(AGE()):'';
+  const cls='f'+(f.w==='s'?' s':f.w==='l'?' l':'')+(f.full?' full':'');
+  const lab=`<span class="lab">${esc(f.label)}${empty&&!ageDef?' <span class="need">· uzupełnij</span>':''}${ageDef?' <span class="note">(wg wieku)</span>':''}</span>`;
+  const id='i_'+f.k.replace(/[^a-zA-Z0-9]/g,'_');
+  if(f.type==='seg'){
+    const cur=s||ageDef;
+    return `<div class="${cls}">${lab}<div class="seg${!cur?' empty':''}" role="group">${f.opts.map(o=>`<button type="button" data-act="seg" data-key="${esc(f.k)}" data-v="${esc(o)}" class="${cur===o?'on':''}" aria-pressed="${cur===o}">${esc(o)}</button>`).join('')}</div></div>`;
+  }
+  if(f.type==='checks'){
+    const arr=Array.isArray(v)?v:[];
+    return `<div class="${cls}">${lab}<div class="seg${!arr.length?' empty':''}" role="group">${f.opts.map(o=>{const ov=typeof o==='string'?o:o.v, ol=typeof o==='string'?o:o.l;return `<button type="button" data-act="chk" data-key="${esc(f.k)}" data-v="${esc(ov)}" class="${arr.includes(ov)?'on':''}" aria-pressed="${arr.includes(ov)}">${esc(ol)}</button>`;}).join('')}</div></div>`;
+  }
+  if(f.type==='select'){
+    return `<div class="${cls}"><label for="${id}">${esc(f.label)}${empty?' <span class="need">· uzupełnij</span>':''}</label><select id="${id}" data-key="${esc(f.k)}" class="${empty?'empty':''}"><option value="">— wybierz —</option>${f.opts.map(o=>`<option ${s===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
+  }
+  const dl=f.dl?`<datalist id="dl_${id}">${f.dl.map(o=>`<option value="${esc(o)}">`).join('')}</datalist>`:'';
+  const inp=`<input type="text" id="${id}" data-key="${esc(f.k)}" value="${esc(s)}" ${f.type==='num'?'inputmode="decimal"':''} ${f.dl?`list="dl_${id}"`:''} placeholder="${esc(f.ph||'')}" class="${empty&&!f.ph?'empty':''}" autocomplete="off">`;
+  const brak=f.type==='brak'?`<button type="button" class="mini" data-act="brak" data-key="${esc(f.k)}">brak</button>`:'';
+  return `<div class="${cls}"><label for="${id}">${esc(f.label)}${empty&&!f.ph?' <span class="need">· uzupełnij</span>':''}${empty&&f.ph?' <span class="note">(domyślnie: '+esc(f.ph)+')</span>':''}</label><div class="unit">${inp}${f.unit?`<span>${f.unit}</span>`:''}${brak}</div>${dl}</div>`;
+}
+function sitesHTML(code,t){
+  const row=(f,lab)=>`<div>${lab}</div>`+SITES.map(x=>{const k='T|'+code+'|'+t+'|'+f+x;const s=str(getVal(k));return `<input type="text" inputmode="decimal" data-key="${k}" value="${esc(s)}" aria-label="${lab} ${x} ząb ${t}" class="${s?'':'empty'}">`;}).join('');
+  return `<div class="sites"><div></div>${SITES.map(x=>`<div class="h">${x}</div>`).join('')}${row('pd','PD (mm)')}${row('cal','CAL (mm)')}</div>`;
+}
+
+/* ---------- odontogram ---------- */
+const ROWS=[[18,17,16,15,14,13,12,11,0,21,22,23,24,25,26,27,28],[55,54,53,52,51,0,61,62,63,64,65],[85,84,83,82,81,0,71,72,73,74,75],[48,47,46,45,44,43,42,41,0,31,32,33,34,35,36,37,38]];
+function toothSVG(code,t,surfs){
+  const L=layout(t);const on=x=>surfs.includes(x)?' class="on"':'';
+  const P=(pts,s)=>`<polygon points="${pts}" data-act="surf" data-code="${code}" data-t="${t}" data-s="${s}"${on(s)}><title>${SNAME[s]}</title></polygon>`;
+  return `<svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">${P('0,0 30,0 21,9 9,9',L.top)}${P('30,0 30,30 21,21 21,9',L.right)}${P('0,30 30,30 21,21 9,21',L.bottom)}${P('0,0 9,9 9,21 0,30',L.left)}<rect x="9" y="9" width="12" height="12" data-act="surf" data-code="${code}" data-t="${t}" data-s="${L.center}"${on(L.center)}><title>${SNAME[L.center]}</title></rect></svg>`;
+}
+function odoHTML(code,mode){
+  const sel=state.teeth[code]||{}; const qs=state.quads[code]||[];
+  const rows=ROWS.map((r,ri)=>{const lower=ri>=2;const prim=ri===1||ri===2;
+    return `<div class="odo-row${prim?' prim':''}">`+r.map(t=>{if(!t)return '<div class="odo-sep"></div>';
+      const isSel=mode==='quad'?qs.includes(qd(t)):!!sel[t];const inq=mode==='mixed'&&qs.includes(qd(t));const surfs=(sel[t]||{}).s||[];
+      const n=`<span class="n">${t}</span>`;
+      return `<div class="tooth${prim?' prim':''}${isSel?' sel':''}${inq?' inq':''}" data-act="tooth" data-code="${code}" data-t="${t}" role="button" tabindex="0" aria-pressed="${isSel}" aria-label="ząb ${t}">${lower?'':n}${toothSVG(code,t,mode==='surf'?surfs:[])}${lower?n:''}</div>`;}).join('')+'</div>'+(ri===1?'<div class="odo-mid"></div>':'');}).join('');
+  let extra='';
+  if(mode==='quad'||mode==='mixed') extra=`<div class="quadbar">${[1,2,3,4].map(q=>`<button type="button" class="chip${qs.includes(q)?' on':''}" data-act="quad" data-code="${code}" data-q="${q}">Ćwiartka ${q}<small>${['','prawa górna','lewa górna','lewa dolna','prawa dolna'][q]}</small></button>`).join('')}<button type="button" class="chip" data-act="quadset" data-code="${code}" data-q="1,2">Szczęka</button><button type="button" class="chip" data-act="quadset" data-code="${code}" data-q="3,4">Żuchwa</button><button type="button" class="chip" data-act="quadset" data-code="${code}" data-q="">Wyczyść</button></div>`;
+  const leg=mode==='mixed'?'<div class="legend">Ćwiartkę zaznaczasz przyciskami pod diagramem (podświetla się na diagramie), ząb – kliknięciem w ząb. Można jedno albo oba.</div>':mode==='surf'?'<div class="legend">Kliknij numer zęba, by go zaznaczyć; kliknij pole kwadratu, by zaznaczyć powierzchnię (M, D, O/I, B/W, P/L). Linia przerywana = zęby mleczne.</div>':'<div class="legend">Zęby mleczne: rzędy środkowe (linia przerywana).</div>';
+  return `<div class="odo${mode==='surf'?' surf':''}"><div class="odo-in">${rows}</div></div>${extra}${leg}`;
+}
+
+/* ---------- karty ---------- */
+function needShared(){const ex=state.codes.some(c=>D[c].exam), hig=state.codes.some(c=>D[c].hig), ins=state.codes.some(c=>D[c].instr);return {ex,hig,ins};}
+function sharedCard(){
+  const {ex,hig,ins}=needShared(); const f=[{k:'sh.age',label:'Wiek pacjenta',type:'num',unit:'lat',w:'s'}];
+  if(ex) f.push(...examFields()); else if(hig){f.push({k:'sh.api',label:'API',type:'num',unit:'%',w:'s'},{k:'sh.gi',label:'GI (Löe–Silness)',type:'num',w:'s'});}
+  let insH='';
+  if(ins){const g=ageGroup();
+    const methH = g==='≥11'
+      ? `<div class="grid">${fieldHTML({k:'sh.meth',label:'Metoda szczotkowania (można kilka)',type:'checks',opts:[{v:'Roll',l:'Roll – mniejsza sprawność manualna'},{v:'Bass',l:'zmodyfikowana Bassa – dobra sprawność'},{v:'Stillman',l:'Stillmana – recesje / przyzębie'}],full:true,rer:'shared'})}</div>`
+      : (g?'<p class="note">Fragment instruktażu dobierany automatycznie z pliku wg wieku.</p>':'<p class="note">Wpisz wiek, aby dobrać instruktaż.</p>');
+    insH=`<div class="sub"><h4>Instruktaż higieny ${g?`– grupa wiekowa <span class="code">${g}</span>`:''}</h4>`+methH+
+     `<div class="grid" style="margin-top:8px">${fieldHTML({k:'sh.ortho',label:'Aparat ortodontyczny (dodatkowe zalecenia)',type:'seg',opts:['tak','nie'],rer:'shared'})}</div></div>`;
+  }
+  return `<section class="card" id="card-shared"><h2>Dane pacjenta i badanie</h2><p class="note" style="margin:0 0 10px">Wspólne dla wszystkich wybranych zabiegów – wpisujesz raz.</p><div class="grid">${f.map(fieldHTML).join('')}</div>${insH}</section>`;
+}
+function cardHTML(code){
+  const d=D[code];
+  const fields=d.fields?d.fields():[];
+  const warns=d.warn?d.warn():[];
+  let h=`<section class="card" id="card-${code}"><h2><span class="code">${code}</span>${esc(d.name)}<span class="icd">${esc(d.icd)}</span></h2>`;
+  if(d.tips&&d.tips.length) h+=`<ul class="tips">${d.tips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
+  h+=warns.map(w=>`<div class="warn">${esc(w)}</div>`).join('');
+  if(fields.length) h+=`<div class="grid">${fields.map(fieldHTML).join('')}</div>`;
+  if(d.repeat){const r=d.repeat();if(r){const arr=state.a[r.k]||[{}];
+    h+=`<div class="sub"><h4>${esc(r.label)}</h4>`+arr.map((row,i)=>`<div class="grid" style="margin-bottom:8px">${r.cols.map(c=>fieldHTML({k:'R|'+r.k+'|'+i+'|'+c.f,label:c.label,type:'text',w:c.w,dl:c.dl})).join('')}<button type="button" class="mini" data-act="delrow" data-key="${r.k}" data-i="${i}" aria-label="usuń kanał">usuń</button></div>`).join('')+`<button type="button" class="btn ghost sm" data-act="addrow" data-key="${r.k}" data-code="${code}">+ dodaj kanał</button></div>`;}}
+  if(d.diag){h+=`<div class="sub"><h4>${esc(d.diag.label)}</h4>${odoHTML(code,d.diag.mode)}`;
+    if(d.perTooth){teethOf(code).forEach(t=>{const pf=d.perTooth(t);const sv=d.diag.mode==='surf'?surfText(surfOf(code,t)):'';
+      h+=`<div class="tooth-panel"><h4><span class="tnum">${t}</span>${isPrim(t)?'<span class="note">mleczny</span>':''}${d.diag.mode==='surf'?(sv?`<span>${esc(sv)}</span>`:'<span class="need" style="color:var(--fill)">kliknij powierzchnie na diagramie</span>'):''}<button type="button" class="mini" data-act="untooth" data-code="${code}" data-t="${t}">usuń ząb</button></h4>${pf.length?`<div class="grid">${pf.map(fieldHTML).join('')}</div>`:''}</div>`;});}
+    h+='</div>';}
+  if(d.fields2){const f2=d.fields2();if(f2.length)h+=`<div class="sub"><h4>Leczenie w związku z urazem</h4><div class="grid">${f2.map(fieldHTML).join('')}</div></div>`;}
+  if(!fields.length&&!d.diag&&!d.repeat) h+=(d.exam||d.instr)?'<p class="note">Pola tego zabiegu są w karcie „Dane pacjenta i badanie” powyżej.</p>':'<p class="note">Szablon nie ma pól do uzupełnienia – opis zostanie wstawiony w całości.</p>';
+  return h+'</section>';
+}
+
+/* ---------- wynik ---------- */
+function buildOut(){return state.codes.map(c=>({code:c,text:D[c].render()}));}
+const plain=s=>s.replace(/\u0001([^\u0002]*)\u0002/g,'[UZUPEŁNIJ: $1]');
+const htmlOut=s=>esc(s).replace(/\u0001([^\u0002]*)\u0002/g,'<mark>[UZUPEŁNIJ: $1]</mark>');
+function missCount(){return buildOut().reduce((n,o)=>n+(o.text.match(/\u0001/g)||[]).length,0);}
+
+/* ---------- widoki ---------- */
+function renderSteps(){
+  const s=state.step, can=state.codes.length>0;
+  $('#steps').innerHTML=[['1. Kody',1],['2. Pytania',2],['3. Opis',3]].map(([l,n])=>`<button type="button" data-act="step" data-n="${n}" class="${s===n?'on':''}" ${n>1&&!can?'disabled':''}>${l}</button>`).join('');
+}
+function renderBar(){
+  const b=$('#bar');
+  if(state.step===1){b.innerHTML=`<div class="in"><span class="miss">${state.codes.length?`Wybrano <b style="color:var(--accent)">${state.codes.length}</b> ${plural(state.codes.length,'kod','kody','kodów')}`:'Wybierz kody zabiegów'}</span><button type="button" class="btn" data-act="step" data-n="2" ${state.codes.length?'':'disabled'}>Dalej: pytania →</button></div>`;return;}
+  const m=missCount();
+  if(state.step===2){b.innerHTML=`<div class="in"><span class="miss${m?'':' okk'}">${m?`Do uzupełnienia: <b>${m}</b> ${plural(m,'pole','pola','pól')}`:'<b>Wszystko uzupełnione</b>'}</span><div class="row"><button type="button" class="btn ghost" data-act="step" data-n="1">← Kody</button><button type="button" class="btn" data-act="step" data-n="3">Generuj opis →</button></div></div>`;return;}
+  b.innerHTML=`<div class="in"><span class="miss${m?'':' okk'}">${m?`W opisie zostało <b>${m}</b> ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ]`:'<b>Opis kompletny</b>'}</span><div class="row"><button type="button" class="btn ghost" data-act="step" data-n="2">← Pytania</button><button type="button" class="btn ghost" data-act="reset" id="resetBtn">Nowy pacjent</button><button type="button" class="btn" data-act="copyall">Kopiuj wszystko</button></div></div>`;
+}
+function renderStep1(){
+  const sel=state.codes.map(c=>`<span class="code">${c}<button type="button" data-act="rmcode" data-c="${c}" aria-label="usuń ${c}">×</button></span>`).join('');
+  return `<section class="card"><h2>Pacjent i wykonane zabiegi</h2>
+  <div class="grid" style="margin-top:10px">
+    ${fieldHTML({k:'sh.age',label:'Wiek pacjenta',type:'num',unit:'lat',w:'s'})}
+    <div class="f l"><label for="codeIn">Kody zabiegów (wpisz po przecinku i Enter)</label><div class="row"><input type="text" id="codeIn" placeholder="np. ST33, ST30, 1101, 1108" autocomplete="off" style="flex:1"><button type="button" class="btn sm" data-act="addcodes">Dodaj</button></div></div>
+  </div>
+  ${state.unknown.length?`<div class="warn">Brak w bazie: ${state.unknown.map(esc).join(', ')}. Dostępne kody są poniżej.</div>`:''}
+  <div class="group"><h3>Wybrane (w tej kolejności powstanie opis)</h3><div class="sel-list">${sel||'<span class="note">Nic jeszcze nie wybrano.</span>'}</div></div>
+  ${GROUPS.map(([g,cs])=>`<div class="group"><h3>${g}</h3><div class="chips">${cs.map(c=>`<button type="button" class="chip${has(c)?' on':''}" data-act="code" data-c="${c}" aria-pressed="${has(c)}">${c}<small>${esc(D[c].name)}</small></button>`).join('')}</div></div>`).join('')}
+  </section>`;
+}
+function renderStep2(){return sharedCard()+state.codes.map(cardHTML).join('');}
+function renderStep3(){
+  const outs=buildOut();
+  const rows=state.codes.map(c=>{const d=D[c];let where='—';
+    if(d.diag&&d.diag.mode==='mixed'){const qs=(state.quads[c]||[]).slice().sort(),ts=teethOf(c);where=[qs.length?'ćwiartki '+qs.join(', '):'',ts.length?'zęby '+ts.join(', '):''].filter(Boolean).join('; ')||'—';}
+    else if(d.diag){if(d.diag.mode==='quad')where=(state.quads[c]||[]).length?'ćwiartki '+(state.quads[c]||[]).slice().sort().join(', '):'—';else{const ts=teethOf(c);where=ts.length?ts.map(t=>{const s=surfOf(c,t);return t+(d.diag.mode==='surf'&&s.length?' '+SORD.filter(x=>s.includes(x)).join(''):'');}).join(', '):'—';}}
+    return `<tr><td class="m">${c}</td><td>${esc(d.icd)}</td><td class="m">${esc(where)}</td></tr>`;}).join('');
+  const m=missCount();
+  const panel=pos=>`<div class="copyall"><p>${pos==='top'?'Cały opis wszystkich zabiegów jednym kliknięciem – wklejasz raz.':'Koniec opisu.'}${m?` <b style="color:var(--fill)">Uwaga: ${m} ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ].</b>`:''}</p><button type="button" class="btn big" data-act="copyall">Kopiuj cały opis (${outs.length} ${plural(outs.length,'zabieg','zabiegi','zabiegów')})</button></div>`;
+  return panel('top')+`<section class="card"><h2>Do diagramu i rozliczenia</h2><p class="note" style="margin:0 0 8px">Ściąga do wpisania w programie gabinetu – nie trafia do kopiowanego opisu.</p><div style="overflow-x:auto"><table class="sum"><thead><tr><th>Kod</th><th>ICD-10 wg pliku</th><th>Zaznaczone na diagramie</th></tr></thead><tbody>${rows}</tbody></table></div></section>`+
+  outs.map((o,i)=>`<section class="card"><div class="out-head"><h2><span class="code">${o.code}</span>${esc(D[o.code].name)}</h2><button type="button" class="btn sm" data-act="copy" data-i="${i}">Kopiuj</button></div><div class="out" id="out-${i}">${htmlOut(o.text)}</div></section>`).join('')+
+  `<section class="card"><div class="out-head"><h2>Cały opis – wszystkie zabiegi razem</h2><button type="button" class="btn sm" data-act="copyall">Kopiuj</button></div><div class="out all">${htmlOut(outs.map(o=>o.text).join('\n\n'))}</div></section>`+panel('bottom');
+}
+function render(){
+  renderSteps();
+  $('#main').innerHTML=state.step===1?renderStep1():state.step===2?renderStep2():renderStep3();
+  renderBar();
+}
+function rerenderCard(code){
+  if(state.step!==2){render();return;}
+  const id=code==='shared'?'card-shared':'card-'+code; const el=document.getElementById(id);
+  if(el){const tmp=document.createElement('div');tmp.innerHTML=code==='shared'?sharedCard():cardHTML(code);el.replaceWith(tmp.firstElementChild);}
+  else render();
+  renderBar();
+}
+
+/* ---------- zdarzenia ---------- */
+function addCodes(txt){
+  const toks=(txt.toUpperCase().match(/[A-Z]*\d+[A-Z]?/g)||[]);state.unknown=[];
+  toks.forEach(t=>{if(D[t]){if(!has(t))state.codes.push(t);}else state.unknown.push(t);});
+}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),1600);}
+async function copyText(s){
+  try{await navigator.clipboard.writeText(s);toast('Skopiowano');return;}catch(e){}
+  const ta=$('#clip');ta.value=s;ta.select();try{document.execCommand('copy');toast('Skopiowano');}catch(e){toast('Nie udało się skopiować – zaznacz tekst ręcznie');}
+}
+function toggleTooth(code,t){
+  const d=D[code];const o=state.teeth[code]=state.teeth[code]||{};
+  if(d.diag.mode==='quad'){const q=qd(t);const qs=state.quads[code]=state.quads[code]||[];const i=qs.indexOf(q);i>=0?qs.splice(i,1):qs.push(q);return;}
+  if(o[t])delete o[t];else o[t]={s:[],f:{}};
+}
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
+  if(a==='step'){state.step=+el.dataset.n;render();window.scrollTo(0,0);return;}
+  if(a==='code'){const c=el.dataset.c;has(c)?state.codes.splice(state.codes.indexOf(c),1):state.codes.push(c);render();return;}
+  if(a==='rmcode'){state.codes.splice(state.codes.indexOf(el.dataset.c),1);render();return;}
+  if(a==='addcodes'){addCodes($('#codeIn').value);render();return;}
+  if(a==='seg'){const k=el.dataset.key;const cur=str(getVal(k));setVal(k,cur===el.dataset.v?'':el.dataset.v);afterChange(el);return;}
+  if(a==='chk'){const k=el.dataset.key;let arr=getVal(k);arr=Array.isArray(arr)?arr.slice():[];const v=el.dataset.v;const i=arr.indexOf(v);i>=0?arr.splice(i,1):arr.push(v);setVal(k,arr);afterChange(el);return;}
+  if(a==='brak'){setVal(el.dataset.key,'brak');afterChange(el);return;}
+  if(a==='tooth'){if(e.target.closest('[data-act="surf"]'))return;toggleTooth(el.dataset.code,+el.dataset.t);rerenderCard(el.dataset.code);return;}
+  if(a==='surf'){const c=el.dataset.code,t=+el.dataset.t,s=el.dataset.s;const d=D[c];
+    if(d.diag.mode!=='surf'){toggleTooth(c,t);rerenderCard(c);return;}
+    const o=state.teeth[c]=state.teeth[c]||{};o[t]=o[t]||{s:[],f:{}};const i=o[t].s.indexOf(s);i>=0?o[t].s.splice(i,1):o[t].s.push(s);rerenderCard(c);return;}
+  if(a==='untooth'){delete (state.teeth[el.dataset.code]||{})[el.dataset.t];rerenderCard(el.dataset.code);return;}
+  if(a==='quad'){const c=el.dataset.code,q=+el.dataset.q;const qs=state.quads[c]=state.quads[c]||[];const i=qs.indexOf(q);i>=0?qs.splice(i,1):qs.push(q);rerenderCard(c);return;}
+  if(a==='quadset'){const c=el.dataset.code;state.quads[c]=el.dataset.q?el.dataset.q.split(',').map(Number):[];rerenderCard(c);return;}
+  if(a==='addrow'){(state.a[el.dataset.key]=state.a[el.dataset.key]||[]).push({});rerenderCard(el.dataset.code);return;}
+  if(a==='delrow'){const arr=state.a[el.dataset.key]||[];arr.splice(+el.dataset.i,1);if(!arr.length)arr.push({});rerenderCard('1206');return;}
+  if(a==='copy'){const o=buildOut()[+el.dataset.i];copyText(plain(o.text));return;}
+  if(a==='copyall'){copyText(buildOut().map(o=>plain(o.text)).join('\n\n'));return;}
+  if(a==='reset'){if(!el.dataset.armed){el.dataset.armed='1';el.textContent='Kliknij ponownie, aby wyczyścić';setTimeout(()=>{if(el.isConnected){delete el.dataset.armed;el.textContent='Nowy pacjent';}},3000);return;}
+    state.step=1;state.codes=[];state.a={};state.teeth={};state.quads={};state.unknown=[];initDefaults();render();window.scrollTo(0,0);return;}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.target.id==='codeIn'){e.preventDefault();addCodes(e.target.value);render();setTimeout(()=>{const i=$('#codeIn');if(i)i.focus();},0);}
+  if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('tooth')){e.preventDefault();e.target.click();}
+});
+function cardOf(el){const c=el.closest('section.card');if(!c)return null;return c.id==='card-shared'?'shared':c.id.replace('card-','');}
+function afterChange(el){
+  const card=cardOf(el);
+  if(state.step===2){
+    if(card==='shared'){rerenderCard('shared');state.codes.forEach(c=>{if(D[c].fields||D[c].perTooth)rerenderCard(c);});}
+    else if(card)rerenderCard(card);
+  } else render();
+}
+document.addEventListener('input',e=>{
+  const k=e.target.dataset&&e.target.dataset.key;if(!k)return;
+  setVal(k,e.target.value);
+  e.target.classList.toggle('empty',!e.target.value.trim());
+  const lab=e.target.closest('.f')&&e.target.closest('.f').querySelector('label .need');if(lab&&e.target.value.trim())lab.remove();
+  renderBar();
+});
+document.addEventListener('change',e=>{
+  const k=e.target.dataset&&e.target.dataset.key;if(!k)return;
+  setVal(k,e.target.value);
+  if(e.target.tagName==='SELECT'){afterChange(e.target);return;}
+  if(k==='sh.age'&&state.step===2){afterChange(e.target);}
+});
+render();
+</script>
+</body>
+</html>
