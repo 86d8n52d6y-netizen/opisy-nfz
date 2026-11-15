@@ -115,6 +115,16 @@ table.sum{border-collapse:collapse;width:100%;font-size:13.5px}
 table.sum th,table.sum td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
 table.sum th{color:var(--muted);font-weight:600;font-size:12.5px}
 table.sum td.m{font-family:var(--font-mono)}
+.plans{border:1px solid var(--accent);background:var(--accent-soft);border-radius:var(--r);padding:12px 14px;margin:12px 0 4px}
+.plans-h{margin:0 0 8px;font-size:15px}
+.plan-row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:6px 0}
+.plan-row+.plan-row{border-top:1px dashed var(--line)}
+.plan-row.dim{opacity:.55}
+.plan-lab{min-width:170px;font-weight:600;font-size:14px}
+.plan-btns{display:flex;flex-wrap:wrap;gap:8px}
+.plan-btn{font:inherit;display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 12px;cursor:pointer;min-width:150px}
+.plan-btn b{font-size:14px}.plan-btn span{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.plan-btn.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.plan-btn.on span{color:var(--accent-ink);opacity:.9}
 .copyall{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--r);padding:14px 16px;margin-bottom:14px}
 .copyall p{margin:0;font-size:14px}
 .btn.big{font-size:16px;padding:12px 22px}
@@ -138,11 +148,11 @@ table.sum td.m{font-family:var(--font-mono)}
 <div class="toast" id="toast" role="status"></div>
 <textarea id="clip" aria-hidden="true" style="position:fixed;left:-9999px;top:0;opacity:0"></textarea>
 
-<script src="szablony.js?v=2026-11-15-3"></script>
+<script src="szablony.js?v=2026-11-15-4"></script>
 <script>
 
 /* ---------- stan ---------- */
-const state = { step:1, codes:[], a:{}, teeth:{}, quads:{}, unknown:[] };
+const state = { step:1, codes:[], a:{}, teeth:{}, quads:{}, unknown:[], plan:null };
 function initDefaults(){ state.a['ST30.czas']='21'; state.a['ST30G.czas']='21'; state.a['ST30E.czas']='11'; state.a['1206.canals']=[{}]; }
 initDefaults();
 
@@ -404,8 +414,13 @@ function extCode(code,title,name){return {name,icd:'K02 / K04 / K05 (wg rozpozna
 const PLANS={
  o5:{label:'Pacjent powyżej 5 r.ż.',v:{I:['ST33','ST30','ST26','1101'],II:['ST34','ST30','ST26','1101'],III:['ST28','ST30G','ST26','1101'],IV:['ST34','ST26','1006']}},
  u5:{label:'Pacjent poniżej 5 r.ż.',v:{I:['ST28','ST30G','ST26','1101'],II:['ST28','ST30E','ST26','1101'],III:['ST33','ST26','1006'],IV:['ST34','ST26','1006']}}};
-function plansHTML(){const a=AGE();const keys=a===null?['u5','o5']:a<5?['u5']:['o5'];
-  return `<div class="group"><h3>Szablon wizyty z pliku (dodaje kody; wypełnienia / ekstrakcje dodaj osobno)</h3>`+keys.map(k=>`<div class="row" style="margin-top:6px"><span class="note" style="min-width:170px">${PLANS[k].label}</span>${Object.entries(PLANS[k].v).map(([w,cs])=>`<button type="button" class="chip" data-act="plan" data-p="${k}" data-w="${w}">${w} wizyta<small>${cs.join(', ')}</small></button>`).join('')}</div>`).join('')+`</div>`;}
+function plansHTML(){const a=AGE();const match=a===null?null:(a<5?'u5':'o5');
+  const row=k=>{const isM=match===k;const dim=match&&!isM;
+    return `<div class="plan-row${dim?' dim':''}"><div class="plan-lab">${PLANS[k].label}${isM?' <span class="code">wg wieku</span>':''}</div><div class="plan-btns">${Object.entries(PLANS[k].v).map(([w,cs])=>{const on=state.plan&&state.plan.p===k&&state.plan.w===w;
+      return `<button type="button" class="plan-btn${on?' on':''}" data-act="plan" data-p="${k}" data-w="${w}" aria-pressed="${on}"><b>${w} wizyta</b><span>${cs.join(' · ')}</span></button>`;}).join('')}</div></div>`;};
+  const order=match==='u5'?['u5','o5']:['o5','u5'];
+  const warn=state.plan&&match&&state.plan.p!==match?`<div class="warn">Wybrany plan jest dla grupy „${PLANS[state.plan.p].label.toLowerCase()}”, a wpisany wiek to ${a} lat.</div>`:'';
+  return `<div class="plans"><h3 class="plans-h">Która wizyta w roku? <span class="note">– kliknij, a procedury z tabeli zaznaczą się same</span></h3>${order.map(row).join('')}${warn}<p class="note" style="margin:6px 0 0">Wypełnienia, ekstrakcje i inne dodatkowe zabiegi dobierz niżej – zostaną dopisane po procedurach z wizyty.</p></div>`;}
 const GROUPS=[
  ['Badania',['ST33','ST34','ST28']],
  ['Profilaktyka i higienizacja',['ST30','ST30G','ST30E','1101','1006']],
@@ -520,11 +535,13 @@ function renderStep1(){
   return `<section class="card"><h2>Pacjent i wykonane zabiegi</h2>
   <div class="grid" style="margin-top:10px">
     ${fieldHTML({k:'sh.age',label:'Wiek pacjenta',type:'num',unit:'lat',w:'s'})}
-    <div class="f l"><label for="codeIn">Kody zabiegów (wpisz po przecinku i Enter)</label><div class="row"><input type="text" id="codeIn" placeholder="np. ST33, ST30, 1101, 1108" autocomplete="off" style="flex:1"><button type="button" class="btn sm" data-act="addcodes">Dodaj</button></div></div>
+  </div>
+  ${plansHTML()}
+  <div class="grid" style="margin-top:12px">
+    <div class="f l"><label for="codeIn">Dodatkowe kody zabiegów (wpisz po przecinku i Enter)</label><div class="row"><input type="text" id="codeIn" placeholder="np. ST33, ST30, 1101, 1108" autocomplete="off" style="flex:1"><button type="button" class="btn sm" data-act="addcodes">Dodaj</button></div></div>
   </div>
   ${state.unknown.length?`<div class="warn">Brak w bazie: ${state.unknown.map(esc).join(', ')}. Dostępne kody są poniżej.</div>`:''}
-  <div class="group"><h3>Wybrane (w tej kolejności powstanie opis)</h3><div class="sel-list">${sel||'<span class="note">Nic jeszcze nie wybrano.</span>'}</div></div>
-  ${plansHTML()}
+  <div class="group"><h3>Wybrane procedury (w tej kolejności powstanie opis)</h3><div class="sel-list">${sel||'<span class="note">Nic jeszcze nie wybrano.</span>'}</div></div>
   ${GROUPS.map(([g,cs])=>`<div class="group"><h3>${g}</h3><div class="chips">${cs.map(c=>`<button type="button" class="chip${has(c)?' on':''}" data-act="code" data-c="${c}" aria-pressed="${has(c)}">${c}<small>${esc(D[c].name)}</small></button>`).join('')}</div></div>`).join('')}
   </section>`;
 }
@@ -574,7 +591,12 @@ document.addEventListener('click',e=>{
   if(a==='step'){state.step=+el.dataset.n;render();window.scrollTo(0,0);return;}
   if(a==='code'){const c=el.dataset.c;has(c)?state.codes.splice(state.codes.indexOf(c),1):state.codes.push(c);render();return;}
   if(a==='rmcode'){state.codes.splice(state.codes.indexOf(el.dataset.c),1);render();return;}
-  if(a==='plan'){PLANS[el.dataset.p].v[el.dataset.w].forEach(c=>{if(!has(c))state.codes.push(c);});render();return;}
+  if(a==='plan'){const p=el.dataset.p,w=el.dataset.w;const prev=state.plan?PLANS[state.plan.p].v[state.plan.w]:[];
+    const same=state.plan&&state.plan.p===p&&state.plan.w===w;
+    const rest=state.codes.filter(c=>!prev.includes(c));
+    if(same){state.plan=null;state.codes=rest;}
+    else{const nw=PLANS[p].v[w];state.plan={p,w};state.codes=nw.concat(rest.filter(c=>!nw.includes(c)));}
+    render();return;}
   if(a==='addcodes'){addCodes($('#codeIn').value);render();return;}
   if(a==='seg'){const k=el.dataset.key;const cur=str(getVal(k));setVal(k,cur===el.dataset.v?'':el.dataset.v);afterChange(el);return;}
   if(a==='chk'){const k=el.dataset.key;let arr=getVal(k);arr=Array.isArray(arr)?arr.slice():[];const v=el.dataset.v;const i=arr.indexOf(v);i>=0?arr.splice(i,1):arr.push(v);setVal(k,arr);afterChange(el);return;}
@@ -591,7 +613,7 @@ document.addEventListener('click',e=>{
   if(a==='copy'){const o=buildOut()[+el.dataset.i];copyText(plain(o.text));return;}
   if(a==='copyall'){copyText(buildOut().map(o=>plain(o.text)).join('\n\n'));return;}
   if(a==='reset'){if(!el.dataset.armed){el.dataset.armed='1';el.textContent='Kliknij ponownie, aby wyczyścić';setTimeout(()=>{if(el.isConnected){delete el.dataset.armed;el.textContent='Nowy pacjent';}},3000);return;}
-    state.step=1;state.codes=[];state.a={};state.teeth={};state.quads={};state.unknown=[];initDefaults();render();window.scrollTo(0,0);return;}
+    state.step=1;state.plan=null;state.codes=[];state.a={};state.teeth={};state.quads={};state.unknown=[];initDefaults();render();window.scrollTo(0,0);return;}
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&e.target.id==='codeIn'){e.preventDefault();addCodes(e.target.value);render();setTimeout(()=>{const i=$('#codeIn');if(i)i.focus();},0);}
