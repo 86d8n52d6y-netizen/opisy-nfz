@@ -1,0 +1,25 @@
+# T0 – test dymny: przejście przez wszystkie widoki prawdziwymi kliknięciami, bez błędów JS
+import sys,os; sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
+from h import *
+with sync_playwright() as p:
+    b=launch(p); ctx=b.new_context(viewport={'width':1100,'height':900}); errs=[]; pg=open_page(ctx,errs=errs); t=T()
+    t.chk('start: 6 zakładek, magazyn danych gotowy (IndexedDB)', clean(pg.inner_text('#steps')).replace('\n',' | ')=='1. Kody | 2. Pytania | 3. Opis | Historia | Statystyki | Ustawienia' and pg.evaluate("DB.kind")=='idb', pg.evaluate("DB.kind"))
+    pg.fill('#i_sh_age','9'); pg.click('button.plan-btn[data-p="o5"][data-w="I"]')
+    pg.click('#bar button.btn:not(.ghost)')
+    pg.click('#card-ST30 button[data-act="quadset"][data-q="1,2"]')
+    for tt in (11,12,21,22): pg.click(f'#card-1101 .tooth[data-t="{tt}"]')
+    pg.click('#bar button.btn:not(.ghost)'); idle(pg)
+    line=clean(pg.inner_text('a.pts-total'))
+    t.chk('krok 3: 286,8 pkt × 1,84 = 527,71 zł, lekarz 40% = 211,08 zł', '286,8 pkt' in line and '527,71 zł' in line and '40%: 211,08 zł' in line, line)
+    t.chk('bez inicjałów i bez trybu automatycznego: nic nie zapisano', len(visits(pg))==0 and 'Nie zapisano' in pg.inner_text('#save-st'))
+    pg.fill('#i_sv_ini','jk'); pg.press('#i_sv_ini','Tab'); idle(pg)
+    v=visits(pg)
+    t.chk('po wpisaniu inicjałów: 1 wpis JK, 286,8 pkt, 527,71 zł, czas 30 min', len(v)==1 and v[0]['ini']=='JK' and v[0]['pts']==286.8 and v[0]['k']['pc']==52771 and v[0]['min']==30, v and {k:v[0][k] for k in ('ini','pts','min','no','date')})
+    pg.click('#steps button[data-n="4"]'); t.chk('Historia: karta wpisu JK', pg.locator('section.card.hist').count()==1 and 'JK' in pg.inner_text('section.card.hist'))
+    pg.click('#steps button[data-n="5"]'); t.chk('Statystyki: kafelek „Zarobek razem” 527,71 zł', '527,71' in clean(pg.inner_text('.hero')), clean(pg.inner_text('.hero')))
+    for tab in ('weeks','months','dow','days'):
+        pg.click(f'button[data-act="tab"][data-t="{tab}"]')
+    pg.click('#steps button[data-n="6"]'); t.chk('Ustawienia: stawki 1,84 i 350', pg.input_value('#i_cfg_price')=='1,84' and pg.input_value('#i_cfg_rev')=='350')
+    pg.click('#bar button.btn'); t.chk('powrót do generatora na krok 3', pg.evaluate("state.step")==3)
+    t.chk('brak błędów JS', not errs, errs)
+    t.done('T0 dym'); b.close()

@@ -12,9 +12,9 @@ Plik do wznawiania pracy po przerwie (np. po wyczerpaniu limitu). Aktualizowany 
 | Etap | Stan | Commit |
 |---|---|---|
 | 1. Audyt obecnej aplikacji | ✅ zrobione | `2d9ef5e` |
-| 2. Plan zmian | ✅ zrobione | ten commit |
-| 3. Wdrożenie | ⏳ następny | |
-| 4. Testowanie | – | |
+| 2. Plan zmian | ✅ zrobione | `67da90b` |
+| 3. Wdrożenie | ✅ zrobione (kod w repo; poprawki po testach w etapach 4–5) | ten commit |
+| 4. Testowanie | ⏳ następny | |
 | 5. Optymalizacja | – | |
 | 6. Raport końcowy + scalenie do `main` | – | |
 
@@ -87,6 +87,24 @@ Została przejrzana w całości, wiersz po wierszu, i przejęta jako baza Etapu 
 
 **Pliki:** zmienia się `index.html` (cała logika), opisy w `README.md` i `CLAUDE.md`; `szablony.js` bez zmian. Testy w `testy/`.
 
+### ETAP 3 – Wdrożenie
+
+Cała logika w `index.html` (z 106 kB do ok. 190 kB), `szablony.js` bez zmian. Co doszło:
+
+| Obszar | Co zrobiono | Gdzie w kodzie |
+|---|---|---|
+| Magazyn danych | IndexedDB (`visits`, `bodies`, `segs`) + awaryjnie localStorage + pamięć tymczasowa; przeniesienie starej historii; prośba o trwałe przechowywanie | sekcja „magazyn danych”, `dbInit`, `migrateV1` |
+| Ustawienia | jeden klucz `opisyNFZ.cfg`: stawka 1,84, przeglądy 350, % lekarza, tryb zapisu, podstawa statystyk | sekcja „ustawienia (localStorage)” |
+| Kwoty | liczone w groszach (`centsPts`, `centsPct`, `centsHours`, `calc`) | sekcja „liczby i kwoty” |
+| Zapis wizyty | `autoSave`: tryb z inicjałami / automatyczny, zapis tylko przy zmianie, pytanie przy podejrzeniu innego pacjenta | sekcja „zapis wizyty z generatora” |
+| Rozliczenie wizyty | czas wizyty (+10 min), godziny przeglądów, dodatkowe zarobki | `visitTime`, `settleHTML` |
+| Historia | podsumowanie dnia, szybki wpis, edycja kwot, usuwanie, wyszukiwanie | sekcje „formularz wpisu”, „historia wizyt” |
+| Statystyki | zakres dat, kafelki, Dni / Tygodnie / Miesiące / Dni tygodnia, wykresy SVG | sekcja „statystyki” |
+| Kopia zapasowa | eksport i scalające wczytanie pliku .json | sekcja „kopia zapasowa” |
+| Poprawki z audytu | błędy 1–6 z Etapu 1 | – |
+
+Sprawdzone przed tym commitem: `bash sprawdz.sh`, `testy/t0_dym.py` (9/9), `testy/t1_obliczenia.py` (25/25). Pełne testy – Etap 4.
+
 ## Zrobione wcześniej
 - [x] Szablony: pacjent poniżej i powyżej 5 r.ż., plany wizyt I–IV
 - [x] Wycena punktowa (zarz. 95/2026/DSOZ, 44/2025/DSOZ), kwota i udział lekarza 40%/35%
@@ -99,3 +117,4 @@ Została przejrzana w całości, wiersz po wierszu, i przejęta jako baza Etapu 
 | 2026-11-15 | `porzadek-pracy` | Dodano plik postępu, zasady pracy i test składni |
 | 2026-11-15 | `porzadek-pracy` | ETAP 1: audyt wersji z `main` – 6 potwierdzonych problemów (w tym nadpisywanie wpisu), skrypt `testy/audyt_v9.py` |
 | 2026-11-15 | `porzadek-pracy` | ETAP 2: plan zmian – mapa wymagań i 10 rozstrzygnięć konfliktów z dotychczasowym działaniem |
+| 2026-11-15 | `porzadek-pracy` | ETAP 3: wdrożenie w `index.html` – ewidencja wizyt, dwa tryby zapisu, przeglądy, kwoty dodatkowe, +10 min, statystyki, kopia zapasowa |
