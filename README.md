@@ -20,6 +20,9 @@ Historia jest trzymana **wyłącznie w pamięci tej przeglądarki na tym urządz
 |---|---|
 | `index.html` | wygląd, pytania, diagram i zdania z polami do uzupełnienia (obiekt `D`) |
 | `szablony.js` | stałe fragmenty tekstu z pliku gabinetu (badanie, zalecenia, instruktaż wg wieku itd.) |
+| `POSTEP.md` | co zrobione, co w toku, co dalej – do wznawiania pracy po przerwie |
+| `CLAUDE.md` | zasady pracy w repo (gałęzie, etapy, test przed commitem) |
+| `sprawdz.sh` | test składni JS przed commitem: `bash sprawdz.sh` |
 
 ## Jak wprowadzić zmianę
 1. Otwórz plik na GitHubie → ikona ołówka (Edit).
