@@ -54,7 +54,7 @@ h1 small{display:block;font-size:13px;font-weight:400;color:var(--muted)}
 .f.s{min-width:90px;max-width:120px}.f.m{min-width:170px;max-width:240px}.f.l{flex:1 1 320px}.f.full{flex:1 1 100%}
 .f>label,.f>.lab{font-size:12.5px;font-weight:600;color:var(--muted)}
 .lab .need{color:var(--fill);font-weight:600}
-input[type=text],select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:7px 9px;width:100%}
+input[type=text],input[type=date],select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:7px 9px;width:100%}
 input[type=text].empty,select.empty{border-color:var(--fill);background:var(--fill-soft)}
 input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .unit{display:flex;align-items:center;gap:6px}.unit span{color:var(--muted);font-size:13px}
@@ -126,6 +126,22 @@ table.sum td.m{font-family:var(--font-mono)}
 .pts-total{font-family:var(--font-mono);font-size:15px;font-weight:600;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:8px 12px;white-space:nowrap}
 .out-head .acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 a.pts-total{text-decoration:none}a.pts-total:hover{background:var(--accent);color:var(--accent-ink)}
+.pts-total{white-space:normal;line-height:1.35}
+.money{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,1.2fr);gap:10px;margin-top:12px}
+.mbox{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.mbox.hl{border-color:var(--accent);background:var(--accent-soft)}
+.mbox .lab{font-size:12.5px;font-weight:600;color:var(--muted)}
+.mbox .mval{font-family:var(--font-mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.mbox .unit input{max-width:90px}
+.mbox .mrow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+@media (max-width:760px){.money{grid-template-columns:1fr}}
+.save-row{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;border:1px dashed var(--line);border-radius:8px;padding:10px 12px;margin:10px 0 0}
+.save-st{font-size:13.5px;flex:1 1 240px;align-self:center}
+.save-ok{color:var(--ok);font-weight:600}.save-bad{color:var(--fill);font-weight:600}.save-none{color:var(--muted)}
+.hist h2{gap:8px}.hist .hdate{font-family:var(--font-mono);font-size:14px;font-weight:600}
+.hist .hcodes{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);font-weight:400}
+.hist .row{margin-top:10px}
+.steps button.hist-tab{border-style:dashed}
 table.sum td.r,table.sum th.r{text-align:right;white-space:nowrap}
 table.sum tfoot td{border-bottom:0;border-top:2px solid var(--ink);font-weight:700;font-size:14.5px}
 table.sum .sub-n{display:block;font-family:var(--font-body);font-size:12px;color:var(--warn);margin-top:2px}
@@ -163,11 +179,11 @@ table.sum .sub-n{display:block;font-family:var(--font-body);font-size:12px;color
 <div class="toast" id="toast" role="status"></div>
 <textarea id="clip" aria-hidden="true" style="position:fixed;left:-9999px;top:0;opacity:0"></textarea>
 
-<script src="szablony.js?v=2026-11-15-8"></script>
+<script src="szablony.js?v=2026-11-15-9"></script>
 <script>
 
 /* ---------- stan ---------- */
-const state = { step:1, codes:[], a:{}, teeth:{}, quads:{}, unknown:[], plan:null };
+const state = { step:1, codes:[], a:{}, teeth:{}, quads:{}, unknown:[], plan:null, savedId:null, saveInfo:null, histLim:30, back:1 };
 function initDefaults(){ state.a['ST30.czas']='21'; state.a['ST30G.czas']='21'; state.a['ST30E.czas']='11'; state.a['ST01.wer']='nowy'; state.a['ST02.wer']='nowy'; state.a['1206.canals']=[{}]; }
 initDefaults();
 
@@ -570,11 +586,114 @@ function ptsCard(){
   {const ce=nfzIssues().err.filter(e=>e.codes.length===2);if(ce.length)notes.push(`<div class="err">Suma zawiera kody, których NFZ nie rozliczy razem (${ce.map(e=>e.codes.join(' + ')).map(esc).join('; ')}) – usuń jeden z nich, aby wycena była realna.</div>`);}
   if(a===null)notes.push('<div class="warn">Nie wpisano wieku – wycena bez współczynnika ×1,5 dla dzieci i młodzieży do 18 r.ż.</div>');
   if(a!==null&&a<18&&has('1006'))notes.push('<div class="warn">1006 liczone ×1,5 jak w zakresie ogólnostomatologicznym. Jeśli rozliczasz je w profilaktycznych świadczeniach dla dzieci (§ 3 ust. 1 pkt 10 rozporządzenia), ×1,5 nie przysługuje (§ 12 ust. 2).</div>');
-  return `<section class="card" id="pts-card"><div class="out-head"><h2>Wycena punktowa wizyty (NFZ)</h2><span class="pts-total">Suma: ${fmtP(P.total)} pkt</span></div>${notes.join('')}
+  return `<section class="card" id="pts-card"><div class="out-head"><h2>Wycena punktowa wizyty (NFZ)</h2><span class="pts-total" data-m="line">Wycena wizyty: ${esc(moneyLine(P))}</span></div>${notes.join('')}
   <div style="overflow-x:auto"><table class="sum"><thead><tr><th>Kod</th><th class="r">Ilość</th><th class="r">Pkt z katalogu</th><th>Wiek / ciąża</th><th>Pakiety (§ 13)</th><th class="r">Punkty</th></tr></thead><tbody>${tr}</tbody>
   <tfoot><tr><td colspan="5">Suma punktów za wizytę</td><td class="m r">${fmtP(P.total)}</td></tr></tfoot></table></div>
-  <p class="note" style="margin:8px 0 0">×1,5 – dzieci i młodzież do ukończenia 18 r.ż. (pakiety i świadczenia jednostkowe; nie dotyczy ST30D–ST30G). ×1,2 – kobieta w ciąży lub połogu. Kilka pakietów na wizycie: najwyżej wyceniony ×1,0, każdy kolejny ×0,8 (1 pakiet = 1 ząb / 1 ćwiartka); ST30E i ST30G zawsze ×1,0, świadczenia jednostkowe nie podlegają ×0,8. Kwota w zł = punkty × cena punktu z Twojej umowy z OW NFZ.</p>
+  ${moneyHTML(P)}
+  <p class="note" style="margin:8px 0 0">×1,5 – dzieci i młodzież do ukończenia 18 r.ż. (pakiety i świadczenia jednostkowe; nie dotyczy ST30D–ST30G). ×1,2 – kobieta w ciąży lub połogu. Kilka pakietów na wizycie: najwyżej wyceniony ×1,0, każdy kolejny ×0,8 (1 pakiet = 1 ząb / 1 ćwiartka); ST30E i ST30G zawsze ×1,0, świadczenia jednostkowe nie podlegają ×0,8. Kwota = punkty × cena punktu (domyślnie 1,81 zł – zmienisz ją w polu powyżej); udział lekarza liczony od całej kwoty wizyty. Cena punktu i wybrany % są zapamiętywane w tej przeglądarce.</p>
   <div class="nfz-src">${esc(PTS_SRC)}</div></section>`;
+}
+/* ---------- pamięć przeglądarki (localStorage) ----------
+   Wszystko zostaje wyłącznie w tej przeglądarce na tym urządzeniu – nic nie jest wysyłane. */
+const LS={
+  get(k,d){try{const v=localStorage.getItem('opisyNFZ.'+k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
+  set(k,v){try{localStorage.setItem('opisyNFZ.'+k,JSON.stringify(v));return true;}catch(e){return false;}},
+  del(k){try{localStorage.removeItem('opisyNFZ.'+k);}catch(e){}},
+  keys(pre){const out=[];try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('opisyNFZ.'+pre))out.push(k.slice(9));}}catch(e){}return out;}
+};
+/* ---------- kwoty: cena punktu i udział lekarza ---------- */
+const PRICE_DEF=1.81, PCT_OPTS=[40,35];
+const cfg={price:(()=>{const v=parseFloat(LS.get('price',PRICE_DEF));return v>0&&v<100?v:PRICE_DEF;})(),
+           pct:(()=>{const v=+LS.get('pct',40);return PCT_OPTS.includes(v)?v:40;})()};
+const fmtZ=x=>(Math.round(x*100)/100).toLocaleString('pl-PL',{minimumFractionDigits:2,maximumFractionDigits:2})+' zł';
+function money(total){const zl=Math.round(total*cfg.price*100)/100;return {zl,doc:Math.round(zl*cfg.pct)/100};}
+function moneyLine(P){const M=money(P.total);return `${fmtP(P.total)} pkt · ${fmtZ(M.zl)} · lekarz ${cfg.pct}%: ${fmtZ(M.doc)}`;}
+function moneyHTML(P){const M=money(P.total);
+  return `<div class="money">
+  <div class="mbox"><label class="lab" for="i_cfg_price">Cena punktu</label><div class="unit"><input type="text" inputmode="decimal" id="i_cfg_price" data-cfg="price" value="${esc(num(cfg.price))}" autocomplete="off"><span>zł / pkt</span></div></div>
+  <div class="mbox"><span class="lab">Kwota za wizytę (<span data-m="mult">${fmtP(P.total)} pkt × ${num(cfg.price)} zł</span>)</span><span class="mval" data-m="zl">${fmtZ(M.zl)}</span></div>
+  <div class="mbox hl"><span class="lab">Dla lekarza – % od utargu</span><div class="mrow"><div class="seg" role="group" aria-label="Procent dla lekarza">${PCT_OPTS.map(v=>`<button type="button" data-act="pct" data-v="${v}" class="${cfg.pct===v?'on':''}" aria-pressed="${cfg.pct===v}">${v}%</button>`).join('')}</div><span class="mval" data-m="doc">${fmtZ(M.doc)}</span></div></div>
+  </div>`;}
+function refreshMoney(){const P=nfzPoints(),M=money(P.total);
+  document.querySelectorAll('[data-m="zl"]').forEach(e=>e.textContent=fmtZ(M.zl));
+  document.querySelectorAll('[data-m="doc"]').forEach(e=>e.textContent=fmtZ(M.doc));
+  document.querySelectorAll('[data-m="mult"]').forEach(e=>e.textContent=fmtP(P.total)+' pkt × '+num(cfg.price)+' zł');
+  document.querySelectorAll('[data-m="line"]').forEach(e=>e.textContent='Wycena wizyty: '+moneyLine(P));}
+
+/* ---------- historia opisów ----------
+   Zapis tylko wtedy, gdy wpisano inicjały pacjenta. Jeden pacjent (do „Nowy pacjent”) = jeden wpis, aktualizowany przy zmianach.
+   Klucze: opisyNFZ.hidx – lista wpisów (inicjały, data, kody, kwoty); opisyNFZ.h.<id> – tekst opisu i odpowiedzi. */
+const pad2=n=>String(n).padStart(2,'0');
+function todayISO(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function fmtDate(iso){const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||'');return m?m[3]+'.'+m[2]+'.'+m[1]:(iso||'—');}
+function saveIni(){return str(state.a['sv.ini']).toUpperCase().replace(/\s+/g,' ');}
+function saveDate(){const d=str(state.a['sv.date']);return /^\d{4}-\d{2}-\d{2}$/.test(d)?d:todayISO();}
+function histIdx(){const h=LS.get('hidx',[]);return Array.isArray(h)?h:[];}
+function histGet(id){return LS.get('h.'+id,null);}
+/* Stałe fragmenty szablonów (SEG) zapisują się raz, pod kluczem ze skrótu treści (opisyNFZ.seg.<skrót>), a wpis trzyma do nich odnośniki.
+   Wpis zajmuje dzięki temu ok. 4× mniej miejsca, a zapisany opis nie zmieni się po późniejszej edycji szablonów. */
+function hashStr(t){let h=0x811c9dc5;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,0x01000193);}return (h>>>0).toString(36)+'_'+t.length.toString(36);}
+const SEG_PACK=Object.keys(SEG).filter(k=>typeof SEG[k]==='string'&&SEG[k].length>=120).sort((a,b)=>SEG[b].length-SEG[a].length).map(k=>({v:SEG[k],h:hashStr(SEG[k])}));
+function unpackTxt(t){return t.replace(/\u0003([0-9a-z_]+)\u0004/g,(m,h)=>{const v=LS.get('seg.'+h,null);return typeof v==='string'?v:'[BRAK FRAGMENTU SZABLONU]';});}
+function packTxt(txt){
+  if(/[\u0003\u0004]/.test(txt))return {txt};
+  let t=txt;const used=[];
+  SEG_PACK.forEach(g=>{if(t.indexOf(g.v)<0)return;t=t.split(g.v).join('\u0003'+g.h+'\u0004');used.push(g);});
+  for(const g of used){if(LS.get('seg.'+g.h,null)!==g.v&&!LS.set('seg.'+g.h,g.v))return {txt};}
+  return unpackTxt(t)===txt?{txt:t,p:1}:{txt};          // kontrola: po rozpakowaniu musi wyjść identyczny tekst
+}
+function histText(id){const b=histGet(id);if(!b||typeof b.txt!=='string')return null;return b.p?unpackTxt(b.txt):b.txt;}
+function histDel(id){LS.del('h.'+id);LS.set('hidx',histIdx().filter(x=>x.id!==id));if(state.savedId===id){state.savedId=null;state.saveInfo=null;state.a['sv.ini']='';}}
+function saveEntry(){
+  const ini=saveIni(),date=saveDate(),P=nfzPoints(),M=money(P.total);
+  state.a['sv.date']=date;                      // data wizyty przypięta przy pierwszym zapisie
+  const old=histIdx();const isNew=!state.savedId||!old.some(x=>x.id===state.savedId);
+  const id=isNew?('h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)):state.savedId;
+  const body=Object.assign(packTxt(buildOut().map(o=>plain(o.text)).join('\n\n')),{
+    snap:JSON.parse(JSON.stringify({codes:state.codes,a:Object.assign({},state.a,{'hs.q':undefined}),teeth:state.teeth,quads:state.quads,plan:state.plan}))});
+  const meta={id,ini,date,at:new Date().toISOString(),codes:state.codes.slice(),pts:P.total,price:cfg.price,zl:M.zl,pct:cfg.pct,doc:M.doc,miss:missCount()};
+  if(!LS.set('h.'+id,body))return {ok:false,why:'ls'};
+  const idx=old.filter(x=>x.id!==id);idx.push(meta);
+  idx.sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.at).localeCompare(String(a.at)));
+  if(!LS.set('hidx',idx)){if(isNew)LS.del('h.'+id);return {ok:false,why:'ls'};}
+  state.savedId=id;return {ok:true,meta};
+}
+function autoSave(){
+  if(!state.codes.length){state.saveInfo=null;return null;}
+  if(!saveIni()){state.saveInfo={ok:false,why:'ini'};return state.saveInfo;}
+  state.saveInfo=saveEntry();return state.saveInfo;
+}
+function saveFieldsHTML(){
+  return `<div class="f m"><label for="i_sv_ini">Inicjały pacjenta <span class="note">· zapis w historii</span></label><input type="text" id="i_sv_ini" data-key="sv.ini" data-opt="1" value="${esc(str(state.a['sv.ini']))}" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="np. JK" style="text-transform:uppercase"></div>
+  <div class="f m"><label for="i_sv_date">Data wizyty</label><input type="date" id="i_sv_date" data-key="sv.date" data-opt="1" value="${esc(saveDate())}"></div>`;}
+function saveStatusHTML(){const i=state.saveInfo;
+  if(i&&i.ok)return `<span class="save-ok">Zapisano w historii: ${esc(i.meta.ini)} · ${fmtDate(i.meta.date)}</span> <span class="note">– zmiany dopisują się do tego samego wpisu.</span>`;
+  if(i&&i.why==='ls')return '<span class="save-bad">Nie udało się zapisać – pamięć przeglądarki jest pełna albo zablokowana. Usuń starsze wpisy w zakładce Historia.</span>';
+  return '<span class="save-none">Nie zapisano – bez inicjałów pacjenta opis nie trafia do historii.</span>';}
+function refreshSave(){const el=document.getElementById('save-st');if(el)el.innerHTML=saveStatusHTML();renderSteps();}
+function histMetaLine(m){return `${fmtP(m.pts)} pkt · ${fmtZ(m.zl)} · lekarz ${m.pct}%: ${fmtZ(m.doc)}`;}
+function lsUsage(){let n=0;try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('opisyNFZ.'))n+=k.length+(localStorage.getItem(k)||'').length;}}catch(e){return null;}return n;}
+function histListHTML(){
+  const q=str(state.a['hs.q']).toUpperCase();const all=histIdx();
+  if(!all.length)return '<section class="card"><p class="note" style="margin:0">Brak zapisanych opisów. Wpisz inicjały pacjenta (krok 1 albo 3) – opis zapisze się sam po wygenerowaniu.</p></section>';
+  const list=q?all.filter(m=>String(m.ini||'').toUpperCase().includes(q)||fmtDate(m.date).includes(q)):all;
+  if(!list.length)return `<section class="card"><p class="note" style="margin:0">Brak wpisów dla „${esc(q)}”.</p></section>`;
+  const lim=state.histLim;
+  return list.slice(0,lim).map(m=>`<section class="card hist" id="hist-${esc(m.id)}"><div class="out-head"><h2><span class="tnum">${esc(m.ini)}</span><span class="hdate">${fmtDate(m.date)}</span><span class="hcodes">${esc((m.codes||[]).join(' · '))}</span></h2><span class="pts">${esc(histMetaLine(m))}</span></div>${m.miss?`<div class="warn">Zapisano z ${m.miss} ${plural(m.miss,'polem','polami','polami')} [UZUPEŁNIJ].</div>`:''}<div class="row"><button type="button" class="btn sm" data-act="hcopy" data-id="${esc(m.id)}">Kopiuj opis</button><button type="button" class="btn ghost sm" data-act="hshow" data-id="${esc(m.id)}" aria-expanded="false">Pokaż opis</button><button type="button" class="btn ghost sm" data-act="hopen" data-id="${esc(m.id)}">Otwórz i popraw</button><button type="button" class="mini" data-act="hdel" data-id="${esc(m.id)}">usuń</button></div><div class="out hidden" id="htxt-${esc(m.id)}"></div></section>`).join('')
+    +(list.length>lim?`<button type="button" class="btn ghost" data-act="hmore">Pokaż starsze (${list.length-lim})</button>`:'');
+}
+function renderHistory(){
+  const idx=histIdx();const n=idx.length;const u=lsUsage();const pc=u===null?null:u/50000;const oldN=idx.filter(m=>String(m.date)<histCutoff()).length;
+  return `<section class="card"><div class="out-head"><h2>Zapisane opisy <span class="code">${n}</span></h2><div class="acts">${n?`<button type="button" class="btn ghost sm" data-act="hexport">Pobierz kopię (.txt)</button>${oldN?`<button type="button" class="mini" data-act="hold" data-lab="usuń starsze niż 3 mies. (${oldN})">usuń starsze niż 3 mies. (${oldN})</button>`:''}<button type="button" class="mini" data-act="hclear">usuń wszystkie</button>`:''}</div></div>
+  ${pc!==null&&pc>=80?'<div class="warn">Pamięć historii jest prawie pełna – pobierz kopię i usuń starsze wpisy, inaczej kolejne opisy nie zapiszą się.</div>':''}
+  <p class="note" style="margin:6px 0 10px">Opisy są zapisane tylko w tej przeglądarce na tym urządzeniu – nie są nigdzie wysyłane i nie przenoszą się między komputerem a telefonem. Zobaczy je każdy, kto korzysta z tej przeglądarki; wyczyszczenie danych przeglądarki usuwa historię.${pc===null?'':` Zajęte miejsce: ok. ${pc<10?fmtP(Math.round(pc*10)/10):Math.round(pc)}% pamięci przeglądarki.`}</p>
+  ${n?`<div class="grid"><div class="f l"><label for="i_hs_q">Szukaj po inicjałach lub dacie</label><input type="text" id="i_hs_q" data-key="hs.q" data-opt="1" value="${esc(str(state.a['hs.q']))}" placeholder="np. JK albo 15.11" autocomplete="off"></div></div>`:''}</section><div id="hist-list">${histListHTML()}</div>`;
+}
+function histCutoff(){const d=new Date();d.setMonth(d.getMonth()-3);return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function histExport(){
+  const parts=histIdx().map(m=>`=== ${m.ini} · ${fmtDate(m.date)} · ${(m.codes||[]).join(', ')} · ${histMetaLine(m)} ===\n${histText(m.id)||''}`);
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+parts.join('\n\n\n')],{type:'text/plain;charset=utf-8'}));
+  a.download='opisy-nfz-historia-'+todayISO()+'.txt';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
 function ptsExtraCard(){
   if(!state.codes.some(c=>ANES_CODES.includes(c)))return '';
@@ -602,7 +721,7 @@ function fieldHTML(f){
     return `<div class="${cls}"><label for="${id}">${esc(f.label)}${empty?' <span class="need">· uzupełnij</span>':''}</label><select id="${id}" data-key="${esc(f.k)}" class="${empty?'empty':''}"><option value="">— wybierz —</option>${f.opts.map(o=>`<option ${s===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
   }
   const dl=f.dl?`<datalist id="dl_${id}">${f.dl.map(o=>`<option value="${esc(o)}">`).join('')}</datalist>`:'';
-  const inp=`<input type="text" id="${id}" data-key="${esc(f.k)}" value="${esc(s)}" ${f.type==='num'?'inputmode="decimal"':''} ${f.dl?`list="dl_${id}"`:''} placeholder="${esc(f.ph||'')}" class="${empty&&!f.ph&&!f.opt?'empty':''}" autocomplete="off">`;
+  const inp=`<input type="text" id="${id}" data-key="${esc(f.k)}" value="${esc(s)}" ${f.type==='num'?'inputmode="decimal"':''} ${f.dl?`list="dl_${id}"`:''} placeholder="${esc(f.ph||'')}" class="${empty&&!f.ph&&!f.opt?'empty':''}" ${f.opt?'data-opt="1"':''} autocomplete="off">`;
   const brak=f.type==='brak'?`<button type="button" class="mini" data-act="brak" data-key="${esc(f.k)}">brak</button>`:'';
   return `<div class="${cls}"><label for="${id}">${esc(f.label)}${empty&&!f.ph&&!f.opt?' <span class="need">· uzupełnij</span>':''}${empty&&f.ph?' <span class="note">(domyślnie: '+esc(f.ph)+')</span>':''}</label><div class="unit">${inp}${f.unit?`<span>${f.unit}</span>`:''}${brak}</div>${dl}</div>`;
 }
@@ -678,12 +797,14 @@ function missCount(){return buildOut().reduce((n,o)=>n+(o.text.match(/\u0001/g)|
 /* ---------- widoki ---------- */
 function renderSteps(){
   const s=state.step, can=state.codes.length>0;
-  $('#steps').innerHTML=[['1. Kody',1],['2. Pytania',2],['3. Opis',3]].map(([l,n])=>`<button type="button" data-act="step" data-n="${n}" class="${s===n?'on':''}" ${n>1&&!can?'disabled':''}>${l}</button>`).join('');
+  const hn=histIdx().length;
+  $('#steps').innerHTML=[['1. Kody',1],['2. Pytania',2],['3. Opis',3],['Historia'+(hn?' ('+hn+')':''),4]].map(([l,n])=>`<button type="button" data-act="step" data-n="${n}" class="${s===n?'on':''}${n===4?' hist-tab':''}" ${(n===2||n===3)&&!can?'disabled':''}>${l}</button>`).join('');
 }
 function renderBar(){
   const b=$('#bar');
+  if(state.step===4){const hn=histIdx().length;b.innerHTML=`<div class="in"><span class="miss">${hn?`Zapisane opisy: <b style="color:var(--accent)">${hn}</b>`:'Historia jest pusta'}</span><button type="button" class="btn" data-act="step" data-n="${state.back||1}">← Wróć do generatora</button></div>`;return;}
   if(state.step===1){const ne1=nfzIssues().err.length;b.innerHTML=`<div class="in"><span class="miss">${state.codes.length?`Wybrano <b style="color:var(--accent)">${state.codes.length}</b> ${plural(state.codes.length,'kod','kody','kodów')}`:'Wybierz kody zabiegów'}${ne1?` · <b style="color:var(--fill)">Błędy NFZ: ${ne1}</b>`:''}</span><button type="button" class="btn" data-act="step" data-n="2" ${state.codes.length?'':'disabled'}>Dalej: pytania →</button></div>`;return;}
-  const m=missCount();refreshNfz();const ne=nfzIssues().err.length;const P=nfzPoints();const neTxt=(ne?` · <b style="color:var(--fill)">Błędy NFZ: ${ne}</b>`:'')+(P.rows.length?` · Wycena: <b style="color:var(--accent)">${fmtP(P.total)} pkt</b>`:'');
+  const m=missCount();refreshNfz();const ne=nfzIssues().err.length;const P=nfzPoints();const neTxt=(ne?` · <b style="color:var(--fill)">Błędy NFZ: ${ne}</b>`:'')+(P.rows.length?` · <span style="color:var(--accent);font-weight:600">${esc(moneyLine(P))}</span>`:'');
   if(state.step===2){b.innerHTML=`<div class="in"><span class="miss${m?'':' okk'}">${m?`Do uzupełnienia: <b>${m}</b> ${plural(m,'pole','pola','pól')}`:'<b>Wszystko uzupełnione</b>'}${neTxt}</span><div class="row"><button type="button" class="btn ghost" data-act="step" data-n="1">← Kody</button><button type="button" class="btn" data-act="step" data-n="3">Generuj opis →</button></div></div>`;return;}
   b.innerHTML=`<div class="in"><span class="miss${m?'':' okk'}">${m?`W opisie zostało <b>${m}</b> ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ]`:'<b>Opis kompletny</b>'}${neTxt}</span><div class="row"><button type="button" class="btn ghost" data-act="step" data-n="2">← Pytania</button><button type="button" class="btn ghost" data-act="reset" id="resetBtn">Nowy pacjent</button><button type="button" class="btn" data-act="copyall">Kopiuj wszystko</button></div></div>`;
 }
@@ -692,7 +813,9 @@ function renderStep1(){
   return `<section class="card"><h2>Pacjent i wykonane zabiegi</h2>
   <div class="grid" style="margin-top:10px">
     ${fieldHTML({k:'sh.age',label:'Wiek pacjenta',type:'num',unit:'lat',w:'s'})}
+    ${saveFieldsHTML()}
   </div>
+  <p class="note" style="margin:6px 0 0">Inicjały są opcjonalne: z inicjałami gotowy opis zapisze się w zakładce Historia, bez nich nie zostanie zapisany.</p>
   ${plansHTML()}
   <div class="grid" style="margin-top:12px">
     <div class="f l"><label for="codeIn">Dodatkowe kody zabiegów (wpisz po przecinku i Enter)</label><div class="row"><input type="text" id="codeIn" placeholder="np. ST33, ST30, 1101, 1108" autocomplete="off" style="flex:1"><button type="button" class="btn sm" data-act="addcodes">Dodaj</button></div></div>
@@ -712,7 +835,7 @@ function renderStep3(){
     const mn=nfzMin(c);return `<tr><td class="m">${c}</td><td>${esc(icdOf(c))}</td><td class="m">${esc(where)}</td><td class="m">${mn?mn+' min'+(nfzPackages(c)>1?` (${nfzPackages(c)}×${NFZ_MIN[c]})`:''):'—'}</td><td class="m">${aotEst(c)?'~'+aotEst(c)+' min':'—'}</td></tr>`;}).join('');
   const m=missCount();
   const P=nfzPoints();
-  const all=`<section class="card"><div class="out-head"><h2>Cały opis – wszystkie zabiegi razem</h2><div class="acts">${P.rows.length?`<a class="pts-total" href="#pts-card" title="Szczegóły wyceny poniżej">Wycena wizyty: ${fmtP(P.total)} pkt</a>`:''}<button type="button" class="btn" data-act="copyall">Kopiuj cały opis (${outs.length} ${plural(outs.length,'zabieg','zabiegi','zabiegów')})</button></div></div>${m?`<div class="warn">Uwaga: w opisie ${m===1?'zostało':'zostały'} ${m} ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ].</div>`:''}<div class="out all">${htmlOut(outs.map(o=>o.text).join('\n\n'))}</div></section>`;
+  const all=`<section class="card"><div class="out-head"><h2>Cały opis – wszystkie zabiegi razem</h2><div class="acts">${P.rows.length?`<a class="pts-total" href="#pts-card" title="Szczegóły wyceny poniżej" data-m="line">Wycena wizyty: ${esc(moneyLine(P))}</a>`:''}<button type="button" class="btn" data-act="copyall">Kopiuj cały opis (${outs.length} ${plural(outs.length,'zabieg','zabiegi','zabiegów')})</button></div></div><div class="save-row">${saveFieldsHTML()}<div class="save-st" id="save-st" role="status">${saveStatusHTML()}</div></div>${m?`<div class="warn">Uwaga: w opisie ${m===1?'zostało':'zostały'} ${m} ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ].</div>`:''}<div class="out all">${htmlOut(outs.map(o=>o.text).join('\n\n'))}</div></section>`;
   const sum=`<section class="card"><h2>Do diagramu i rozliczenia</h2><p class="note" style="margin:0 0 8px">Ściąga do wpisania w programie gabinetu – nie trafia do kopiowanego opisu.</p><div style="overflow-x:auto"><table class="sum"><thead><tr><th>Kod</th><th>ICD-10 wg pliku</th><th>Zaznaczone na diagramie</th><th>Min. czas NFZ</th><th>Orientacyjnie (wycena AOTMiT)</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
   const each=`<div class="group" style="margin:18px 0 8px"><h3>Poszczególne zabiegi osobno</h3></div>`+outs.map((o,i)=>`<section class="card"><div class="out-head"><h2><span class="code">${o.code}</span>${esc(D[o.code].name)}</h2><button type="button" class="btn sm" data-act="copy" data-i="${i}">Kopiuj</button></div><div class="out" id="out-${i}">${htmlOut(o.text)}</div></section>`).join('');
   const est=state.codes.reduce((n,c)=>n+(aotEst(c)||nfzMin(c)||0),0);
@@ -721,8 +844,9 @@ function renderStep3(){
   return nfzBox()+all+ptsCard()+sum2+each;
 }
 function render(){
+  if(state.step===3)autoSave();
   renderSteps();
-  $('#main').innerHTML=state.step===1?renderStep1():state.step===2?renderStep2():renderStep3();
+  $('#main').innerHTML=state.step===1?renderStep1():state.step===2?renderStep2():state.step===3?renderStep3():renderHistory();
   renderBar();
 }
 function rerenderCard(code){
@@ -740,9 +864,10 @@ function addCodes(txt){
   toks.forEach(t=>{if(D[t]){if(!has(t))state.codes.push(t);}else state.unknown.push(t);});
 }
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),1600);}
-async function copyText(s){
-  try{await navigator.clipboard.writeText(s);toast('Skopiowano');return;}catch(e){}
-  const ta=$('#clip');ta.value=s;ta.select();try{document.execCommand('copy');toast('Skopiowano');}catch(e){toast('Nie udało się skopiować – zaznacz tekst ręcznie');}
+async function copyText(s,msg){
+  msg=msg||'Skopiowano';
+  try{await navigator.clipboard.writeText(s);toast(msg);return;}catch(e){}
+  const ta=$('#clip');ta.value=s;ta.select();try{document.execCommand('copy');toast(msg);}catch(e){toast('Nie udało się skopiować – zaznacz tekst ręcznie');}
 }
 function toggleTooth(code,t){
   const d=D[code];const o=state.teeth[code]=state.teeth[code]||{};
@@ -751,7 +876,7 @@ function toggleTooth(code,t){
 }
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
-  if(a==='step'){state.step=+el.dataset.n;render();window.scrollTo(0,0);return;}
+  if(a==='step'){const n=+el.dataset.n;if(n===4&&state.step!==4)state.back=state.step;if(n===4)state.histLim=30;state.step=n;render();window.scrollTo(0,0);return;}
   if(a==='code'){const c=el.dataset.c;has(c)?state.codes.splice(state.codes.indexOf(c),1):state.codes.push(c);render();return;}
   if(a==='rmcode'){state.codes.splice(state.codes.indexOf(el.dataset.c),1);render();return;}
   if(a==='plan'){const p=el.dataset.p,w=el.dataset.w;const prev=state.plan?PLANS[state.plan.p].v[state.plan.w]:[];
@@ -773,10 +898,33 @@ document.addEventListener('click',e=>{
   if(a==='quadset'){const c=el.dataset.code;state.quads[c]=el.dataset.q?el.dataset.q.split(',').map(Number):[];rerenderCard(c);return;}
   if(a==='addrow'){(state.a[el.dataset.key]=state.a[el.dataset.key]||[]).push({});rerenderCard(el.dataset.code);return;}
   if(a==='delrow'){const arr=state.a[el.dataset.key]||[];arr.splice(+el.dataset.i,1);if(!arr.length)arr.push({});rerenderCard('1206');return;}
-  if(a==='copy'){const o=buildOut()[+el.dataset.i];copyText(plain(o.text));return;}
-  if(a==='copyall'){copyText(buildOut().map(o=>plain(o.text)).join('\n\n'));return;}
+  if(a==='copy'){const o=buildOut()[+el.dataset.i];const r=autoSave();refreshSave();copyText(plain(o.text),r&&r.ok?'Skopiowano · zapisano w historii':'Skopiowano');return;}
+  if(a==='copyall'){const r=autoSave();refreshSave();copyText(buildOut().map(o=>plain(o.text)).join('\n\n'),r&&r.ok?'Skopiowano · zapisano w historii':'Skopiowano');return;}
+  if(a==='pct'){cfg.pct=+el.dataset.v;LS.set('pct',cfg.pct);render();return;}
+  if(a==='hcopy'){const t=histText(el.dataset.id);if(t)copyText(t);else toast('Nie znaleziono treści tego wpisu');return;}
+  if(a==='hshow'){const box=document.getElementById('htxt-'+el.dataset.id);if(!box)return;const open=box.classList.contains('hidden');
+    if(open&&!box.dataset.ok){box.textContent=histText(el.dataset.id)||'Brak treści tego wpisu.';box.dataset.ok='1';}
+    box.classList.toggle('hidden',!open);el.textContent=open?'Ukryj opis':'Pokaż opis';el.setAttribute('aria-expanded',String(open));return;}
+  if(a==='hopen'){const id=el.dataset.id;const b=histGet(id);if(!b||!b.snap){toast('Nie da się otworzyć tego wpisu');return;}
+    if(state.codes.length&&state.savedId!==id){
+      if(saveIni())autoSave();
+      else if(!el.dataset.armed){el.dataset.armed='1';const t=el.textContent;el.textContent='Bieżący opis nie jest zapisany – kliknij ponownie';setTimeout(()=>{if(el.isConnected){delete el.dataset.armed;el.textContent=t;}},3500);return;}}
+    const sn=b.snap;const q=state.a['hs.q'];const mt=histIdx().find(x=>x.id===id)||{};state.codes=(sn.codes||[]).filter(c=>D[c]);state.a=sn.a||{};
+    if(mt.ini)state.a['sv.ini']=mt.ini;if(mt.date)state.a['sv.date']=mt.date;if(q)state.a['hs.q']=q;state.teeth=sn.teeth||{};state.quads=sn.quads||{};state.plan=sn.plan||null;state.unknown=[];
+    if(!Array.isArray(state.a['1206.canals'])||!state.a['1206.canals'].length)state.a['1206.canals']=[{}];
+    state.savedId=id;state.saveInfo=null;state.step=state.codes.length?3:1;render();window.scrollTo(0,0);return;}
+  if(a==='hdel'){if(!el.dataset.armed){el.dataset.armed='1';el.textContent='kliknij ponownie, aby usunąć';setTimeout(()=>{if(el.isConnected){delete el.dataset.armed;el.textContent='usuń';}},3000);return;}
+    histDel(el.dataset.id);render();toast('Usunięto wpis');return;}
+  if(a==='hclear'){if(!el.dataset.armed){el.dataset.armed='1';el.textContent='kliknij ponownie – usunie całą historię';setTimeout(()=>{if(el.isConnected){delete el.dataset.armed;el.textContent='usuń wszystkie';}},3500);return;}
+    LS.keys('h.').concat(LS.keys('seg.')).forEach(k=>LS.del(k));LS.set('hidx',[]);if(state.savedId)state.a['sv.ini']='';state.savedId=null;state.saveInfo=null;render();toast('Historia wyczyszczona');return;}
+  if(a==='hold'){if(!el.dataset.armed){el.dataset.armed='1';el.textContent='kliknij ponownie, aby usunąć starsze wpisy';setTimeout(()=>{if(el.isConnected){delete el.dataset.armed;el.textContent=el.dataset.lab;}},3500);return;}
+    const cut=histCutoff();const idx=histIdx();const old=idx.filter(m=>String(m.date)<cut);old.forEach(m=>LS.del('h.'+m.id));LS.set('hidx',idx.filter(m=>!(String(m.date)<cut)));
+    if(old.some(m=>m.id===state.savedId)){state.savedId=null;state.saveInfo=null;state.a['sv.ini']='';}render();toast('Usunięto starsze wpisy: '+old.length);return;}
+  if(a==='hmore'){state.histLim+=30;render();return;}
+  if(a==='hexport'){histExport();return;}
   if(a==='reset'){if(!el.dataset.armed){el.dataset.armed='1';el.textContent='Kliknij ponownie, aby wyczyścić';setTimeout(()=>{if(el.isConnected){delete el.dataset.armed;el.textContent='Nowy pacjent';}},3000);return;}
-    state.step=1;state.plan=null;state.codes=[];state.a={};state.teeth={};state.quads={};state.unknown=[];initDefaults();render();window.scrollTo(0,0);return;}
+    if(state.step===3)autoSave();
+    state.step=1;state.plan=null;state.codes=[];state.a={};state.teeth={};state.quads={};state.unknown=[];state.savedId=null;state.saveInfo=null;initDefaults();render();window.scrollTo(0,0);return;}
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&e.target.id==='codeIn'){e.preventDefault();addCodes(e.target.value);render();setTimeout(()=>{const i=$('#codeIn');if(i)i.focus();},0);}
@@ -791,18 +939,23 @@ function afterChange(el){
   } else render();
 }
 document.addEventListener('input',e=>{
+  if(e.target.dataset&&e.target.dataset.cfg==='price'){const v=parseFloat(String(e.target.value).replace(',','.'));
+    if(v>0&&v<100){cfg.price=v;LS.set('price',v);refreshMoney();renderBar();}return;}
   const k=e.target.dataset&&e.target.dataset.key;if(!k)return;
   setVal(k,e.target.value);
-  e.target.classList.toggle('empty',!e.target.value.trim());
+  if(k==='hs.q'){const l=document.getElementById('hist-list');if(l){state.histLim=30;l.innerHTML=histListHTML();}return;}
+  if(k==='sh.age'&&state.step===1){const pl=document.querySelector('.plans');if(pl){const t=document.createElement('div');t.innerHTML=plansHTML();pl.replaceWith(t.firstElementChild);}refreshNfz();}
+  if(!e.target.dataset.opt)e.target.classList.toggle('empty',!e.target.value.trim());
   const lab=e.target.closest('.f')&&e.target.closest('.f').querySelector('label .need');if(lab&&e.target.value.trim())lab.remove();
   renderBar();
 });
 document.addEventListener('change',e=>{
+  if(e.target.dataset&&e.target.dataset.cfg==='price'){e.target.value=num(cfg.price);if(state.step===3){autoSave();refreshSave();}return;}   // bez przebudowy widoku – nie gubi kliknięcia
   const k=e.target.dataset&&e.target.dataset.key;if(!k)return;
   setVal(k,e.target.value);
+  if((k==='sv.ini'||k==='sv.date')&&state.step===3){autoSave();refreshSave();return;}
   if(e.target.tagName==='SELECT'){afterChange(e.target);return;}
   if(k==='sh.age'&&state.step===2){afterChange(e.target);}
-  if(k==='sh.age'&&state.step===1){render();}
 });
 render();
 </script>
