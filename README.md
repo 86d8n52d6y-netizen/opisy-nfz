@@ -1,6 +1,6 @@
 # Generator opisów zabiegów NFZ
 
-Aplikacja do generowania opisów do dokumentacji (pacjent powyżej 5 r.ż., wizyta 30 min) na podstawie szablonów gabinetu.
+Aplikacja do generowania opisów do dokumentacji (wizyta 30 min) na podstawie szablonów gabinetu – pacjent poniżej i powyżej 5 r.ż. (w tym ST30E i szablony wizyt I–IV).
 
 **Jak działa:** wiek pacjenta i kody zabiegów → pytania i diagram zębów (zęby, ćwiartki, powierzchnie) → gotowy opis z przyciskiem „Kopiuj cały opis”. Niewypełnione miejsca zostają jako `[UZUPEŁNIJ: …]`. Aplikacja niczego nie zapisuje.
 

@@ -129,7 +129,7 @@ table.sum td.m{font-family:var(--font-mono)}
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>Generator opisów zabiegów NFZ<small>Pacjent powyżej 5 r.ż. · wizyta 30 min · szablony z pliku gabinetu</small></h1>
+    <h1>Generator opisów zabiegów NFZ<small>Wizyta 30 min · szablony gabinetu: pacjent poniżej i powyżej 5 r.ż.</small></h1>
     <nav class="steps" id="steps"></nav>
   </header>
   <main id="main"></main>
@@ -143,7 +143,7 @@ table.sum td.m{font-family:var(--font-mono)}
 
 /* ---------- stan ---------- */
 const state = { step:1, codes:[], a:{}, teeth:{}, quads:{}, unknown:[] };
-function initDefaults(){ state.a['ST30.czas']='21'; state.a['ST30G.czas']='21'; state.a['1206.canals']=[{}]; }
+function initDefaults(){ state.a['ST30.czas']='21'; state.a['ST30G.czas']='21'; state.a['ST30E.czas']='11'; state.a['1206.canals']=[{}]; }
 initDefaults();
 
 /* ---------- helpers ---------- */
@@ -249,7 +249,7 @@ const prepByAge=a=>a<4?PREP3[0]:a<7?PREP3[1]:PREP3[2];
 const prep2ByAge=a=>a<4?PREP3[0]:PREP3[1];
 
 function fillCode(code,cfg){return {
-  name:cfg.name,icd:'K02 / K04 / K05 (wg rozpoznania)',tips:cfg.tips,
+  name:cfg.name,icd:()=>{const a=AGE();return a!==null&&a<5?'K02 / K04 (wg rozpoznania)':'K02 / K04 / K05 (wg rozpoznania)';},tips:cfg.tips,
   diag:{mode:'surf',label:'Zaznacz ząb i kliknij leczone powierzchnie'},
   perTooth:t=>{const p='T|'+code+'|'+t+'|';const f=[];if(cfg.depth)f.push({k:p+'depth',label:'Próchnica',type:'seg',opts:['średnia','głęboka'],rer:code});return f.concat(matFields(p,code));},
   warn:()=>{const w=[];teethOf(code).forEach(t=>{
@@ -301,14 +301,19 @@ const D={
  ST30:{name:'Usunięcie złogów twardych z ½ łuku',icd:'K03.6 Złogi nazębne',tips:['1× w roku kalendarzowym','1× ST30 = ½ łuku → 2 ćwiartki','u małych dzieci skaler na małych obrotach','nie wolno już użyć ST30E dla tych ćwiartek'],hig:true,
    diag:{mode:'quad',label:'Kliknij ząb w ćwiartce, z której usunięto kamień (zaznacza całą ćwiartkę)'},
    fields:()=>[{k:'ST30.czas',label:'Czas procedury',type:'num',unit:'min',w:'s'}],
-   warn:()=>{const q=state.quads.ST30||[];return q.length&&q.length%2?['Zaznaczono '+q.length+' ćwiartki – 1× ST30 obejmuje 2 ćwiartki (½ łuku).']:(q.length>2?['Zaznaczono '+q.length+' ćwiartki = '+(q.length/2)+'× ST30.']:[]);},
+   warn:()=>{const q=state.quads.ST30||[];const a=AGE();if(a!==null&&a<5)return ['W szablonie dla pacjentów poniżej 5 r.ż. zamiast ST30 (skaler) jest ST30E – higienizacja złogów miękkich ½ łuku.'];return q.length&&q.length%2?['Zaznaczono '+q.length+' ćwiartki – 1× ST30 obejmuje 2 ćwiartki (½ łuku).']:(q.length>2?['Zaznaczono '+q.length+' ćwiartki = '+(q.length/2)+'× ST30.']:[]);},
    render:()=>{const q=(state.quads.ST30||[]).slice().sort();return ['USUNIĘCIE ZŁOGÓW NAZĘBNYCH TWARDYCH Z 1/2 ŁUKU ZĘBOWEGO (ST30)',
      'W badaniu przedmiotowym stwierdzono obecność zmineralizowanych, twardych złogów nazębnych naddziąsłowych i poddziąsłowych (kamienia nazębnego) w kwadrantach jamy ustnej '+(q.length?q.join(', '):MISS('ćwiartki (diagram)'))+' – zgodnie z diagramem;',
      'Ocena stanu higieny jamy ustnej:',apiLine(),giLine(),SEG.ST30_A,SEG.ZAL_BODY,'Wskazano termin wizyty kontrolnej. Czas wykonania procedury '+V('ST30.czas','czas')+' min.'].join('\n');}},
  ST30G:{name:'Profesjonalna higienizacja – całe uzębienie',icd:'K03.6 + Z01.2',tips:['1× w roku kalendarzowym','20 min','dokładny diagram'],exam:true,instr:true,
    fields:()=>[{k:'ST30G.czas',label:'Czas procedury',type:'num',unit:'min',w:'s'}],
    render:()=>['PROFESJONALNA HIGIENIZACJA BEZ INSTRUKTAŻU HIGIENY CAŁE UZĘBIENIE (ST30G)',SEG.ST30G_HEAD,SEG.ST30G_EXAM_A,examMid(),SEG.EXAM_B,SEG.ST30G_REMOVAL,'Czas wykonania procedury '+V('ST30G.czas','czas')+' min.',SEG.INSTR_HEAD,instr()].join('\n')},
- ST26:{name:'Leczenie zmian na błonie śluzowej',icd:'wg wariantu',tips:['zapalenie dziąseł: K05.1 / K05','afta: K12.0','nagryzienie: K13.1','uraz: S00.5','zapalenie warg: K13.0'],
+ ST30E:{name:'Profesjonalna higienizacja – ½ łuku',icd:'K03.6 + Z01.2',tips:['bez instruktażu higieny','szablon dla pacjentów poniżej 5 r.ż.','wg pliku: zaznaczamy 4 ćwiartki'],exam:true,
+   diag:{mode:'quad',label:'Kliknij ząb w ćwiartce, z której usunięto złogi miękkie (zaznacza całą ćwiartkę)'},
+   fields:()=>[{k:'ST30E.czas',label:'Czas procedury',type:'num',unit:'min',w:'s'}],
+   render:()=>{const q=(state.quads.ST30E||[]).slice().sort();const rem=SEG.ST30G_REMOVAL.replace('w kwadrantach jamy ustnej – zgodnie z diagramem','w kwadrantach jamy ustnej '+(q.length?q.join(', '):MISS('ćwiartki (diagram)'))+' – zgodnie z diagramem');
+     return ['PROFESJONALNA HIGIENIZACJA BEZ INSTRUKTAŻU HIGIENY ½ ŁUKU ZĘBOWEGO (ST30E)',SEG.ST30E_HEAD,SEG.ST30G_EXAM_A,examMid(),SEG.EXAM_B,rem,'Czas wykonania procedury '+V('ST30E.czas','czas')+' min.'].join('\n');}},
+ ST26:{name:'Leczenie zmian na błonie śluzowej',icd:'wg wariantu',tips:['przy ST28 – opis urazu (S00.5), bez ST28 – zapalenie dziąseł','zapalenie dziąseł: K05.1 / K05','afta: K12.0','nagryzienie: K13.1','uraz: S00.5','zapalenie warg: K13.0'],
    diag:{mode:'mixed',label:'Okolica zmiany – zaznacz ćwiartkę i/lub ząb'},
    fields:()=>{const v=state.a['ST26.var']||[];const f=[{k:'ST26.var',label:'Wariant (można kilka)',type:'checks',full:true,rer:'ST26',opts:[{v:'zap',l:'Zapalenie dziąseł przy złogach (K05.1)'},{v:'uraz',l:'Uraz błony śluzowej / przy ST28 (S00.5)'},{v:'afta',l:'Afta (K12.0)'},{v:'nag',l:'Nagryzienie (K13.1)'},{v:'warg',l:'Zapalenie warg (K13.0)'}]}];
      if(v.includes('zap'))f.push({k:'ST26.plyn',label:'Zapalenie – płukanie',type:'seg',opts:['Eludrilem','roztworem rozcieńczonej H2O2','roztworem nadmanganianu potasu'],rer:'ST26'});
@@ -381,6 +386,7 @@ const D={
      o.push(SEG.ST04_B);return o.join('\n');}}
 };
 const SITES=['MB','B','DB','LB','L','ML'];
+const icdOf=c=>typeof D[c].icd==='function'?D[c].icd():D[c].icd;
 function st26Loc(){const ts=teethOf('ST26'),qs=(state.quads.ST26||[]).slice().sort();
   if(ts.length)return (ts.length>1?'zębów ':'zęba ')+ts.join(', ');
   if(qs.length)return (qs.length>1?'ćwiartek ':'ćwiartki ')+qs.join(', ');
@@ -395,9 +401,14 @@ function extCode(code,title,name){return {name,icd:'K02 / K04 / K05 (wg rozpozna
       o.push('Z wywiadu w dniu dzisiejszym brak przeciwwskazań do zabiegu usunięcia zęba '+t+' (ząb '+(why.length?why.join(', '):MISS('wskazanie – ząb '+t))+'). Oczyszczono zęby z naddziąsłowych i poddziąsłowych złogów nazębnych, a następnie przystąpiono do właściwego zabiegu. Zachowana hemostaza - brak krwawienia. Znieczulenie '+(an.length?an.join(', ')+'.':MISS('znieczulenie – ząb '+t))+' Ekstrakcja, ząb usunięto w całości. '+(z.startsWith('ujemna')?'(Próba zatokowa ujemna dla zęba '+t+'). ':'')+'Przeprowadzono toaletę rany, hemostaza prawidłowa, opatrunek uciskowy i wskazania.');});
     o.push(SEG.EXT_ZAL);return o.join('\n');}};}
 
+const PLANS={
+ o5:{label:'Pacjent powyżej 5 r.ż.',v:{I:['ST33','ST30','ST26','1101'],II:['ST34','ST30','ST26','1101'],III:['ST28','ST30G','ST26','1101'],IV:['ST34','ST26','1006']}},
+ u5:{label:'Pacjent poniżej 5 r.ż.',v:{I:['ST28','ST30G','ST26','1101'],II:['ST28','ST30E','ST26','1101'],III:['ST33','ST26','1006'],IV:['ST34','ST26','1006']}}};
+function plansHTML(){const a=AGE();const keys=a===null?['u5','o5']:a<5?['u5']:['o5'];
+  return `<div class="group"><h3>Szablon wizyty z pliku (dodaje kody; wypełnienia / ekstrakcje dodaj osobno)</h3>`+keys.map(k=>`<div class="row" style="margin-top:6px"><span class="note" style="min-width:170px">${PLANS[k].label}</span>${Object.entries(PLANS[k].v).map(([w,cs])=>`<button type="button" class="chip" data-act="plan" data-p="${k}" data-w="${w}">${w} wizyta<small>${cs.join(', ')}</small></button>`).join('')}</div>`).join('')+`</div>`;}
 const GROUPS=[
  ['Badania',['ST33','ST34','ST28']],
- ['Profilaktyka i higienizacja',['ST30','ST30G','1101','1006']],
+ ['Profilaktyka i higienizacja',['ST30','ST30G','ST30E','1101','1006']],
  ['Błona śluzowa',['ST26']],
  ['Leczenie zachowawcze',['1108','1502','1503','1504','1505','1105','1206']],
  ['Chirurgia i przyzębie',['ST01','ST02','ST19','ST04']]];
@@ -471,7 +482,7 @@ function cardHTML(code){
   const d=D[code];
   const fields=d.fields?d.fields():[];
   const warns=d.warn?d.warn():[];
-  let h=`<section class="card" id="card-${code}"><h2><span class="code">${code}</span>${esc(d.name)}<span class="icd">${esc(d.icd)}</span></h2>`;
+  let h=`<section class="card" id="card-${code}"><h2><span class="code">${code}</span>${esc(d.name)}<span class="icd">${esc(icdOf(code))}</span></h2>`;
   if(d.tips&&d.tips.length) h+=`<ul class="tips">${d.tips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
   h+=warns.map(w=>`<div class="warn">${esc(w)}</div>`).join('');
   if(fields.length) h+=`<div class="grid">${fields.map(fieldHTML).join('')}</div>`;
@@ -513,6 +524,7 @@ function renderStep1(){
   </div>
   ${state.unknown.length?`<div class="warn">Brak w bazie: ${state.unknown.map(esc).join(', ')}. Dostępne kody są poniżej.</div>`:''}
   <div class="group"><h3>Wybrane (w tej kolejności powstanie opis)</h3><div class="sel-list">${sel||'<span class="note">Nic jeszcze nie wybrano.</span>'}</div></div>
+  ${plansHTML()}
   ${GROUPS.map(([g,cs])=>`<div class="group"><h3>${g}</h3><div class="chips">${cs.map(c=>`<button type="button" class="chip${has(c)?' on':''}" data-act="code" data-c="${c}" aria-pressed="${has(c)}">${c}<small>${esc(D[c].name)}</small></button>`).join('')}</div></div>`).join('')}
   </section>`;
 }
@@ -522,7 +534,7 @@ function renderStep3(){
   const rows=state.codes.map(c=>{const d=D[c];let where='—';
     if(d.diag&&d.diag.mode==='mixed'){const qs=(state.quads[c]||[]).slice().sort(),ts=teethOf(c);where=[qs.length?'ćwiartki '+qs.join(', '):'',ts.length?'zęby '+ts.join(', '):''].filter(Boolean).join('; ')||'—';}
     else if(d.diag){if(d.diag.mode==='quad')where=(state.quads[c]||[]).length?'ćwiartki '+(state.quads[c]||[]).slice().sort().join(', '):'—';else{const ts=teethOf(c);where=ts.length?ts.map(t=>{const s=surfOf(c,t);return t+(d.diag.mode==='surf'&&s.length?' '+SORD.filter(x=>s.includes(x)).join(''):'');}).join(', '):'—';}}
-    return `<tr><td class="m">${c}</td><td>${esc(d.icd)}</td><td class="m">${esc(where)}</td></tr>`;}).join('');
+    return `<tr><td class="m">${c}</td><td>${esc(icdOf(c))}</td><td class="m">${esc(where)}</td></tr>`;}).join('');
   const m=missCount();
   const all=`<section class="card"><div class="out-head"><h2>Cały opis – wszystkie zabiegi razem</h2><button type="button" class="btn" data-act="copyall">Kopiuj cały opis (${outs.length} ${plural(outs.length,'zabieg','zabiegi','zabiegów')})</button></div>${m?`<div class="warn">Uwaga: w opisie ${m===1?'zostało':'zostały'} ${m} ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ].</div>`:''}<div class="out all">${htmlOut(outs.map(o=>o.text).join('\n\n'))}</div></section>`;
   const sum=`<section class="card"><h2>Do diagramu i rozliczenia</h2><p class="note" style="margin:0 0 8px">Ściąga do wpisania w programie gabinetu – nie trafia do kopiowanego opisu.</p><div style="overflow-x:auto"><table class="sum"><thead><tr><th>Kod</th><th>ICD-10 wg pliku</th><th>Zaznaczone na diagramie</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
@@ -562,6 +574,7 @@ document.addEventListener('click',e=>{
   if(a==='step'){state.step=+el.dataset.n;render();window.scrollTo(0,0);return;}
   if(a==='code'){const c=el.dataset.c;has(c)?state.codes.splice(state.codes.indexOf(c),1):state.codes.push(c);render();return;}
   if(a==='rmcode'){state.codes.splice(state.codes.indexOf(el.dataset.c),1);render();return;}
+  if(a==='plan'){PLANS[el.dataset.p].v[el.dataset.w].forEach(c=>{if(!has(c))state.codes.push(c);});render();return;}
   if(a==='addcodes'){addCodes($('#codeIn').value);render();return;}
   if(a==='seg'){const k=el.dataset.key;const cur=str(getVal(k));setVal(k,cur===el.dataset.v?'':el.dataset.v);afterChange(el);return;}
   if(a==='chk'){const k=el.dataset.key;let arr=getVal(k);arr=Array.isArray(arr)?arr.slice():[];const v=el.dataset.v;const i=arr.indexOf(v);i>=0?arr.splice(i,1):arr.push(v);setVal(k,arr);afterChange(el);return;}
@@ -604,6 +617,7 @@ document.addEventListener('change',e=>{
   setVal(k,e.target.value);
   if(e.target.tagName==='SELECT'){afterChange(e.target);return;}
   if(k==='sh.age'&&state.step===2){afterChange(e.target);}
+  if(k==='sh.age'&&state.step===1){render();}
 });
 render();
 </script>
