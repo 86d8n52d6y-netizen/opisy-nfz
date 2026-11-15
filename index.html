@@ -118,7 +118,7 @@ table.sum td.m{font-family:var(--font-mono)}
 .copyall{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--r);padding:14px 16px;margin-bottom:14px}
 .copyall p{margin:0;font-size:14px}
 .btn.big{font-size:16px;padding:12px 22px}
-.out.all{max-height:none}
+.out.all{max-height:440px}
 .toast{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.show{opacity:1}
 @media (prefers-reduced-motion: reduce){.toast{transition:none}}
@@ -524,10 +524,10 @@ function renderStep3(){
     else if(d.diag){if(d.diag.mode==='quad')where=(state.quads[c]||[]).length?'ćwiartki '+(state.quads[c]||[]).slice().sort().join(', '):'—';else{const ts=teethOf(c);where=ts.length?ts.map(t=>{const s=surfOf(c,t);return t+(d.diag.mode==='surf'&&s.length?' '+SORD.filter(x=>s.includes(x)).join(''):'');}).join(', '):'—';}}
     return `<tr><td class="m">${c}</td><td>${esc(d.icd)}</td><td class="m">${esc(where)}</td></tr>`;}).join('');
   const m=missCount();
-  const panel=pos=>`<div class="copyall"><p>${pos==='top'?'Cały opis wszystkich zabiegów jednym kliknięciem – wklejasz raz.':'Koniec opisu.'}${m?` <b style="color:var(--fill)">Uwaga: ${m} ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ].</b>`:''}</p><button type="button" class="btn big" data-act="copyall">Kopiuj cały opis (${outs.length} ${plural(outs.length,'zabieg','zabiegi','zabiegów')})</button></div>`;
-  return panel('top')+`<section class="card"><h2>Do diagramu i rozliczenia</h2><p class="note" style="margin:0 0 8px">Ściąga do wpisania w programie gabinetu – nie trafia do kopiowanego opisu.</p><div style="overflow-x:auto"><table class="sum"><thead><tr><th>Kod</th><th>ICD-10 wg pliku</th><th>Zaznaczone na diagramie</th></tr></thead><tbody>${rows}</tbody></table></div></section>`+
-  outs.map((o,i)=>`<section class="card"><div class="out-head"><h2><span class="code">${o.code}</span>${esc(D[o.code].name)}</h2><button type="button" class="btn sm" data-act="copy" data-i="${i}">Kopiuj</button></div><div class="out" id="out-${i}">${htmlOut(o.text)}</div></section>`).join('')+
-  `<section class="card"><div class="out-head"><h2>Cały opis – wszystkie zabiegi razem</h2><button type="button" class="btn sm" data-act="copyall">Kopiuj</button></div><div class="out all">${htmlOut(outs.map(o=>o.text).join('\n\n'))}</div></section>`+panel('bottom');
+  const all=`<section class="card"><div class="out-head"><h2>Cały opis – wszystkie zabiegi razem</h2><button type="button" class="btn" data-act="copyall">Kopiuj cały opis (${outs.length} ${plural(outs.length,'zabieg','zabiegi','zabiegów')})</button></div>${m?`<div class="warn">Uwaga: w opisie ${m===1?'zostało':'zostały'} ${m} ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ].</div>`:''}<div class="out all">${htmlOut(outs.map(o=>o.text).join('\n\n'))}</div></section>`;
+  const sum=`<section class="card"><h2>Do diagramu i rozliczenia</h2><p class="note" style="margin:0 0 8px">Ściąga do wpisania w programie gabinetu – nie trafia do kopiowanego opisu.</p><div style="overflow-x:auto"><table class="sum"><thead><tr><th>Kod</th><th>ICD-10 wg pliku</th><th>Zaznaczone na diagramie</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+  const each=`<div class="group" style="margin:18px 0 8px"><h3>Poszczególne zabiegi osobno</h3></div>`+outs.map((o,i)=>`<section class="card"><div class="out-head"><h2><span class="code">${o.code}</span>${esc(D[o.code].name)}</h2><button type="button" class="btn sm" data-act="copy" data-i="${i}">Kopiuj</button></div><div class="out" id="out-${i}">${htmlOut(o.text)}</div></section>`).join('');
+  return all+sum+each;
 }
 function render(){
   renderSteps();
