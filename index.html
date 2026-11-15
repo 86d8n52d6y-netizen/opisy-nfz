@@ -154,12 +154,12 @@ table.sum td.m{font-family:var(--font-mono)}
 <div class="toast" id="toast" role="status"></div>
 <textarea id="clip" aria-hidden="true" style="position:fixed;left:-9999px;top:0;opacity:0"></textarea>
 
-<script src="szablony.js?v=2026-11-15-6"></script>
+<script src="szablony.js?v=2026-11-15-7"></script>
 <script>
 
 /* ---------- stan ---------- */
 const state = { step:1, codes:[], a:{}, teeth:{}, quads:{}, unknown:[], plan:null };
-function initDefaults(){ state.a['ST30.czas']='21'; state.a['ST30G.czas']='21'; state.a['ST30E.czas']='11'; state.a['1206.canals']=[{}]; }
+function initDefaults(){ state.a['ST30.czas']='21'; state.a['ST30G.czas']='21'; state.a['ST30E.czas']='11'; state.a['ST01.wer']='nowy'; state.a['ST02.wer']='nowy'; state.a['1206.canals']=[{}]; }
 initDefaults();
 
 /* ---------- helpers ---------- */
@@ -410,11 +410,33 @@ function st26Loc(){const ts=teethOf('ST26'),qs=(state.quads.ST26||[]).slice().so
   if(qs.length)return (qs.length>1?'ćwiartek ':'ćwiartki ')+qs.join(', ');
   return 'zęba '+MISS('ćwiartka lub ząb – okolica zmiany (diagram)');}
 function injured(){return teethOf('ST28').filter(t=>str(getVal('T|ST28|'+t+'|role'))==='po urazie');}
-function extCode(code,title,name){return {name,icd:'K02 / K04 / K05 (wg rozpoznania)',tips:['ST19 (nacięcie ropnia) dodaj osobno'],
+const EXT2_REASONS=['znacznie zniszczony, odłamanie fragmentu zęba- nienadający się już do odbudowy','złamanie poddziąsłowe korony zęba','resorpcja fizjologiczna','wskazania ortodontyczne','widoczna przetoka przy ww. zębie, brak reakcji na chlorek etylu - ząb martwy','ropień podśluzówkowy- znaczne zniszczenie tkanek - ząb nienadający się do odbudowy','nieodwracalne zapalenie miazgi, samoistny, ciągły  ból zęba, reakcja na chlorek etylu wzmożona','zwichnięcie zęba'];
+const EXT2_AN={ST01:['miejscowe nasiękowe Dentocaine ( 40mg + 0,005mg)/ml 1 amp','miejscowe powierzchniowe Mark3 20% benzokaina'],
+               ST02:['przewodowe Dentocaine ( 40mg + 0,005mg)/ml 1 amp','miejscowe nasiękowe Dentocaine ( 40mg + 0,005mg)/ml 1 amp','miejscowe powierzchniowe Mark3 20% benzokaina']};
+const EXT2_TITLE={ST01:'(ST01) Ekstrakcje Zębów Jednokorzeniowych',ST02:'(ST02) Ekstrakcje Zębów Wielokorzeniowych W Znieczuleniu Miejscowym I Założeniem Opatrunku Uciskowego'};
+const SINUS=[14,15,16,17,18,24,25,26,27,28];
+const isMulti=t=>{const d=t%10;return isPrim(t)?d>=4:(d>=6||t===14||t===24);};
+const isSingle=t=>t%10<=3;
+function extCode(code,title,name){
+  const ver=()=>str(state.a[code+'.wer'])||'nowy';
+  return {name,icd:'K02 / K04 / K05 (wg rozpoznania)',tips:['ST19 (nacięcie ropnia) dodaj osobno','1 pakiet = 1 ząb; kolejne zęby na wizycie ×0,8','NFZ: wymagane min. 1 znieczulenie (lista ST1)'],
   diag:{mode:'teeth',label:'Zaznacz usunięte zęby'},
-  perTooth:t=>{const p='T|'+code+'|'+t+'|';const f=[{k:p+'why',label:'Wskazanie (można kilka)',type:'checks',opts:EXT_REASONS,full:true,rer:code},{k:p+'an',label:'Znieczulenie (można kilka)',type:'checks',opts:EXT_ANEST,full:true,rer:code}];
+  fields:()=>[{k:code+'.wer',label:'Wersja opisu',type:'seg',opts:['nowy','z pliku gabinetu'],rer:code}],
+  perTooth:t=>{const p='T|'+code+'|'+t+'|';
+    if(ver()==='nowy'){const f=[{k:p+'why2',label:'Wskazanie (można kilka)',type:'checks',opts:EXT2_REASONS,full:true,rer:code},{k:p+'an2',label:'Znieczulenie (można kilka)',type:'checks',opts:EXT2_AN[code],full:true,rer:code}];
+      if(code==='ST02'&&SINUS.includes(t))f.push({k:p+'zat',label:'Próba zatokowa',type:'seg',opts:['ujemna – wpisz','nie wpisuj'],rer:code});return f;}
+    const f=[{k:p+'why',label:'Wskazanie (można kilka)',type:'checks',opts:EXT_REASONS,full:true,rer:code},{k:p+'an',label:'Znieczulenie (można kilka)',type:'checks',opts:EXT_ANEST,full:true,rer:code}];
     if(isUpper(t)&&t%10>=4)f.push({k:p+'zat',label:'Próba zatokowa',type:'seg',opts:['ujemna – wpisz','nie wpisuj'],rer:code});return f;},
-  render:()=>{const ts=teethOf(code);const o=[title];if(!ts.length)o.push(MISS('ząb (diagram)'));
+  warn:()=>{const w=[];teethOf(code).forEach(t=>{
+      if(code==='ST01'&&isMulti(t))w.push('Ząb '+t+' jest zwykle wielokorzeniowy – sprawdź, czy kod to nie ST02.');
+      if(code==='ST02'&&isSingle(t))w.push('Ząb '+t+' jest zwykle jednokorzeniowy – sprawdź, czy kod to nie ST01.');});return w;},
+  render:()=>{const ts=teethOf(code);
+    if(ver()==='nowy'){const o=[EXT2_TITLE[code]];if(!ts.length)o.push(MISS('ząb (diagram)'));
+      ts.forEach(t=>{const p='T|'+code+'|'+t+'|';const why=getVal(p+'why2')||[];const an=getVal(p+'an2')||[];const z=str(getVal(p+'zat'));
+        const anL=an.length?EXT2_AN[code].filter(x=>an.includes(x)).map((x,i)=>'abc'[i]+') '+x).join('\n'):MISS('znieczulenie – ząb '+t);
+        o.push('Z wywiadu w dniu dzisiejszym brak przeciwwskazań do zabiegu usunięcia zęba '+t+' ( '+(why.length?why.join(' / '):MISS('wskazanie – ząb '+t))+' ). Wykonano znieczulenie:\n'+anL+'\nEkstrakcja, ząb usunięto w całości.'+(code==='ST02'&&z.startsWith('ujemna')?' ( Próba zatokowa ujemna dla zęba '+t+' ).':'')+'\nPrzeprowadzono toaletę rany, hemostaza prawidłowa, opatrunek uciskowy i wskazania.');});
+      o.push(SEG.EXT2_ZAL);return o.join('\n');}
+    const o=[title];if(!ts.length)o.push(MISS('ząb (diagram)'));
     ts.forEach(t=>{const p='T|'+code+'|'+t+'|';const why=getVal(p+'why')||[];const an=getVal(p+'an')||[];const z=str(getVal(p+'zat'));
       o.push('Z wywiadu w dniu dzisiejszym brak przeciwwskazań do zabiegu usunięcia zęba '+t+' (ząb '+(why.length?why.join(', '):MISS('wskazanie – ząb '+t))+'). Oczyszczono zęby z naddziąsłowych i poddziąsłowych złogów nazębnych, a następnie przystąpiono do właściwego zabiegu. Zachowana hemostaza - brak krwawienia. Znieczulenie '+(an.length?an.join(', ')+'.':MISS('znieczulenie – ząb '+t))+' Ekstrakcja, ząb usunięto w całości. '+(z.startsWith('ujemna')?'(Próba zatokowa ujemna dla zęba '+t+'). ':'')+'Przeprowadzono toaletę rany, hemostaza prawidłowa, opatrunek uciskowy i wskazania.');});
     o.push(SEG.EXT_ZAL);return o.join('\n');}};}
@@ -462,6 +484,8 @@ function nfzIssues(){
     if(k){const o=k===x?y:x;err.push({codes:[x,y],msg:`${k} i ${o} nie mogą być rozliczone razem – pakiet ${k} „nie sumuje się” z ${o}.`});}}
   Object.keys(NFZ_MIN).forEach(c=>{if(!has(c))return;const v=parseFloat(String(state.a[c+'.czas']||'').replace(',','.'));const mn=nfzMin(c);
     if(!isNaN(v)&&v<mn)err.push({codes:[c],msg:`${c}: czas ${num(v)} min jest krótszy niż minimum NFZ ${mn} min${nfzPackages(c)>1?` (${nfzPackages(c)} pakiety × ${NFZ_MIN[c]} min)`:''}.`});});
+  ['ST01','ST02'].forEach(c=>{if(!has(c))return;const nowy=(str(state.a[c+'.wer'])||'nowy')==='nowy';teethOf(c).forEach(t=>{const an=getVal('T|'+c+'|'+t+'|'+(nowy?'an2':'an'))||[];
+    if(!an.length)err.push({codes:[c],msg:`${c}, ząb ${t}: NFZ wymaga wskazania co najmniej jednego znieczulenia (lista procedur ST1) – inaczej pakiet nie zostanie rozliczony.`});});});
   ['ST30E','ST30G'].forEach(c=>{if(has(c)&&a!==null&&a>=18)err.push({codes:[c],msg:`${c}: pakiety profesjonalnej higienizacji (ST30D–ST30G) są przeznaczone dla dzieci i młodzieży do 18 r.ż.`});});
   const tot=cs.reduce((n,c)=>n+(nfzMin(c)||0),0);
   if(tot>30)warn.push({codes:[],msg:`Suma minimalnych czasów pakietów higienizacji / usuwania złogów to ${tot} min – więcej niż 30-minutowa wizyta.`});
