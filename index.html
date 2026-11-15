@@ -690,10 +690,15 @@ function renderHistory(){
   ${n?`<div class="grid"><div class="f l"><label for="i_hs_q">Szukaj po inicjałach lub dacie</label><input type="text" id="i_hs_q" data-key="hs.q" data-opt="1" value="${esc(str(state.a['hs.q']))}" placeholder="np. JK albo 15.11" autocomplete="off"></div></div>`:''}</section><div id="hist-list">${histListHTML()}</div>`;
 }
 function histCutoff(){const d=new Date();d.setMonth(d.getMonth()-3);return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
-function histExport(){
-  const parts=histIdx().map(m=>`=== ${m.ini} · ${fmtDate(m.date)} · ${(m.codes||[]).join(', ')} · ${histMetaLine(m)} ===\n${histText(m.id)||''}`);
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+parts.join('\n\n\n')],{type:'text/plain;charset=utf-8'}));
-  a.download='opisy-nfz-historia-'+todayISO()+'.txt';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+async function histExport(){
+  const txt='\ufeff'+histIdx().map(m=>`=== ${m.ini} · ${fmtDate(m.date)} · ${(m.codes||[]).join(', ')} · ${histMetaLine(m)} ===\n${histText(m.id)||''}`).join('\n\n\n');
+  const name='opisy-nfz-historia-'+todayISO()+'.txt';
+  // kopia w Claude (artefakt): zapis pliku tylko przez mechanizm pobierania artefaktów
+  try{if(window.claude&&typeof window.claude.use==='function'){const dl=await window.claude.use('downloads');
+    if(dl){try{await dl.save({filename:name,data:txt});toast('Zapisano plik');}catch(e){toast(e&&e.code==='declined'?'Anulowano zapis pliku':'Nie udało się zapisać pliku');}return;}}}catch(e){}
+  // zwykła strona (GitHub Pages)
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain;charset=utf-8'}));
+  a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
 function ptsExtraCard(){
   if(!state.codes.some(c=>ANES_CODES.includes(c)))return '';
