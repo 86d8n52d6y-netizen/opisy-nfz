@@ -19,8 +19,8 @@ Druga aplikacja (Grafik Gabinetów) pochodzi z repo `86d8n52d6y-netizen/grafik-g
 | 2. Przepisy o dokumentacji medycznej | ✅ zrobione | `368161b` |
 | 3. Projekt struktury i danych | ✅ zrobione | `368161b` |
 | 4. Szkielet, użytkownicy i szyfrowanie, oba moduły w nowej strukturze | ✅ zrobione – 13 plików testów, 302 sprawdzenia, wszystkie OK | `e290020` |
-| 5. Moduł Opisy prywatne | ✅ zrobione – 14 plików testów, 351 sprawdzeń, wszystkie OK | ten commit |
-| 6. Edycja szablonów, zestawy, ulubione, szybka wizyta | – | |
+| 5. Moduł Opisy prywatne | ✅ zrobione – 14 plików testów, 351 sprawdzeń, wszystkie OK | `9258ed6` |
+| 6. Edycja szablonów, zestawy, ulubione, szybka wizyta | ⏳ część 1 (Opisy prywatne) zrobiona; część 2 (Opisy NFZ) w toku | |
 | 7. Połączenia modułów, eksport, testy całości, raport, scalenie | – | |
 
 Jak wznowić: przeczytaj tę tabelę i `POLACZENIE.md`, potem `git log --oneline -10` na gałęzi `polaczenie`.
@@ -266,3 +266,4 @@ Ograniczenie testów: automatyczne testy działają w Chrome. Silnika Safari (We
 | 2026-11-16 | `polaczenie` | ETAP 2: przepisy (ustawa o prawach pacjenta, rozporządzenie o dokumentacji – t.j. Dz.U. 2026 poz. 1391, art. 34 u.z.l., NFZ, ZUS, RODO) i 10 wniosków dla szablonów; ETAP 3: projekt plików, sejfu, danych, połączeń i modułu prywatnego |
 | 2026-11-16 | `polaczenie` | ETAP 4: strona główna i konta z szyfrowaniem (`index.html`, `wspolne.js/css`), Opisy NFZ → `nfz.html`, Grafik → `kalendarz.html`, przeniesienie starych danych, pasek modułów, szkice, okno Zarobki; nowy test T12; 13 plików testów, 302 sprawdzenia, wszystkie OK |
 | 2026-11-16 | `polaczenie` | ETAP 5: moduł Opisy prywatne (`prywatne.html`, `prywatne-katalog.js`) – 19 procedur, cenniki gabinetów, wynagrodzenie, historia, zarobki, prywatność; poprawka: kliknięcie „Zapisz” tuż po wpisaniu pola nie ginie; test T13; razem 14 plików, 351 sprawdzeń, wszystkie OK |
+| 2026-11-16 | `polaczenie` | ETAP 6, cz. 1: Opisy prywatne – edytor szablonów (pola, kody, warunki, tekst, podgląd, wersje i przywracanie, własne procedury, duplikat, ukrywanie), migawka szablonu w zapisanej wizycie, ulubione, zestawy (przeciąganie, ceny wg cennika), tryb szybkiej wizyty; test T14 (42 sprawdzenia) |
