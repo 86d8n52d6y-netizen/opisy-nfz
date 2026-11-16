@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Opisy prywatne – Gabinet</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#f2f5f5">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="wspolne.css?v=1">
+<style>
+.pw{padding-top:12px}
+.pw-tabs{display:flex;gap:4px;border-bottom:1px solid var(--g-line);margin-bottom:16px;overflow-x:auto;scrollbar-width:none}
+.pw-tabs::-webkit-scrollbar{display:none}
+.pw-tabs button{font:inherit;font-size:15px;font-weight:500;border:0;background:none;color:var(--g-muted);padding:10px 14px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap;min-height:44px}
+.pw-tabs button[aria-selected="true"]{color:var(--g-accent);border-bottom-color:var(--g-accent);font-weight:600}
+.pw-grid{display:grid;gap:16px;align-items:start}
+@media (min-width:1000px){.pw-grid{grid-template-columns:minmax(0,1fr) 410px}.pw-side{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}}
+.pw .g-card{padding:16px}
+.pw h2{font-size:17px;margin:0 0 10px}
+.pw-hrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.pw-l{display:grid;gap:4px;font-size:13px;font-weight:600;color:var(--g-muted)}
+.pw-in,.pw select,.pw textarea{font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--g-line);border-radius:8px;background:var(--g-surface);color:var(--g-ink);width:100%;min-height:40px;box-sizing:border-box}
+.pw textarea{min-height:64px;resize:vertical;line-height:1.4}
+.pw-in:focus,.pw select:focus,.pw textarea:focus{outline:2px solid var(--g-accent);outline-offset:0;border-color:var(--g-accent)}
+.pw-in.bad{border-color:var(--g-err);background:var(--g-err-soft)}
+.pw-st{font-size:13.5px;color:var(--g-muted);margin-top:10px}
+.pw-st b{color:var(--g-ink)}
+.pw-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.pw-chip{font:inherit;font-size:13.5px;border:1px solid var(--g-line);background:var(--g-surface);color:var(--g-ink);border-radius:999px;padding:6px 12px;cursor:pointer;min-height:34px}
+.pw-chip[aria-pressed="true"]{background:var(--g-accent);border-color:var(--g-accent);color:var(--g-accent-ink)}
+.pw-plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px;margin-top:6px}
+.pw-padd{font:inherit;font-size:14px;text-align:left;border:1px solid var(--g-line);background:var(--g-bg);color:var(--g-ink);border-radius:9px;padding:8px 10px;cursor:pointer;min-height:44px;display:flex;gap:8px;align-items:center}
+.pw-padd:hover{border-color:var(--g-accent)}
+.pw-padd .plus{color:var(--g-accent);font-weight:700;font-size:18px;line-height:1}
+.pw-padd small{display:block;color:var(--g-muted);font-size:12px}
+.pw-kh{font-size:12.5px;font-weight:700;color:var(--g-muted);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 2px}
+.pw-item{border-left:4px solid var(--g-accent)}
+.pw-ih{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.pw-ih b{font-size:16px}
+.pw-num{width:24px;height:24px;border-radius:50%;background:var(--g-accent-soft);color:var(--g-accent);display:grid;place-items:center;font-size:13px;font-weight:700}
+.pw-kat{font-size:12.5px;color:var(--g-muted)}
+.pw-sp{flex:1}
+.pw-ib{font:inherit;font-size:13.5px;border:1px solid var(--g-line);background:var(--g-surface);color:var(--g-ink);border-radius:8px;padding:5px 10px;cursor:pointer;min-height:32px;min-width:32px}
+.pw-ib.danger{color:var(--g-err);border-color:var(--g-err)}
+.pw-ib:disabled{opacity:.4;cursor:default}
+.pw-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 12px}
+.pw-fields .w{grid-column:1/-1}
+.pw-f{display:grid;gap:4px;align-content:start}
+.pw-f>label,.pw-f>.lb{font-size:13px;font-weight:600;color:var(--g-muted)}
+.req{color:var(--g-err)}
+.pw-ms{display:flex;flex-wrap:wrap;gap:6px}
+.pw-ms label{display:flex;align-items:center;gap:6px;border:1px solid var(--g-line);border-radius:999px;padding:5px 11px;font-size:14px;cursor:pointer;min-height:34px;background:var(--g-surface)}
+.pw-ms label:has(input:checked){background:var(--g-accent-soft);border-color:var(--g-accent)}
+.pw-ms input{width:16px;height:16px;margin:0}
+.pw-bool{display:flex;align-items:center;gap:8px;font-size:14.5px;min-height:40px;cursor:pointer}
+.pw-bool input{width:20px;height:20px}
+.pw-tw{display:flex;gap:6px}
+.pw-tw .pw-in{flex:1}
+.pw-warn{font-size:12.5px;color:var(--g-err)}
+.pw-teeth{display:grid;gap:4px;margin-top:6px;padding:8px;border:1px solid var(--g-line);border-radius:10px;background:var(--g-bg)}
+.pw-trow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.pw-q{display:flex;gap:3px}
+.pw-tb{font:inherit;font-size:13px;width:34px;height:34px;border:1px solid var(--g-line);border-radius:7px;background:var(--g-surface);color:var(--g-ink);cursor:pointer;padding:0}
+.pw-tb[aria-pressed="true"]{background:var(--g-accent);color:var(--g-accent-ink);border-color:var(--g-accent)}
+.pw-rows{width:100%;border-collapse:collapse}
+.pw-rows th{font-size:12px;color:var(--g-muted);text-align:left;font-weight:600;padding:2px 4px}
+.pw-rows td{padding:2px 4px}
+.pw-price{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:12px;padding-top:12px;border-top:1px dashed var(--g-line)}
+.pw-price .pw-l{min-width:96px}
+.pw-price .pw-in,.pw-price select{width:auto;min-width:0}
+.pw-price .n{width:90px}.pw-price .q{width:64px}
+.pw-pay{margin-left:auto;text-align:right;font-size:14px}
+.pw-pay b{font-size:17px;color:var(--g-accent)}
+.pw-fold{font-size:14px;color:var(--g-muted);white-space:pre-line}
+.pw-side h2{display:flex;justify-content:space-between;align-items:center}
+.pw-sum{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.pw-sum div{background:var(--g-bg);border-radius:10px;padding:10px}
+.pw-sum span{display:block;font-size:12.5px;color:var(--g-muted)}
+.pw-sum b{font-size:19px;font-variant-numeric:tabular-nums}
+.pw-sum .pay b{color:var(--g-accent)}
+.pw-txt{white-space:pre-wrap;font-family:var(--font-body);font-size:14.5px;line-height:1.5;background:var(--g-bg);border:1px solid var(--g-line);border-radius:10px;padding:12px;margin:0;min-height:120px;max-height:48vh;overflow:auto}
+.pw-txt mark{background:var(--g-warn-soft);color:var(--g-warn);border-radius:4px;padding:0 2px}
+textarea.pw-txted{min-height:260px;font-size:14.5px}
+.pw-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.pw-btns .g-btn{flex:1 1 auto}
+.pw-note{font-size:13px;color:var(--g-muted);margin:8px 0 0}
+.pw-badge{font-size:12.5px;font-weight:600;border-radius:999px;padding:3px 9px;background:var(--g-warn-soft);color:var(--g-warn)}
+.pw-badge.ok{background:var(--g-accent-soft);color:var(--g-accent)}
+.pw-day{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:700;margin:18px 0 8px;font-size:15px}
+.pw-day span{font-weight:500;color:var(--g-muted);font-size:13.5px}
+.pw-h{background:var(--g-surface);border:1px solid var(--g-line);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.pw-hm{display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap}
+.pw-hm .r{text-align:right}
+.pw-hm .r b{color:var(--g-accent);font-size:16px}
+.pw-hp{font-size:13.5px;color:var(--g-muted);margin-top:2px}
+.pw-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}
+.pw-tiles div{background:var(--g-surface);border:1px solid var(--g-line);border-radius:12px;padding:12px}
+.pw-tiles span{display:block;font-size:12.5px;color:var(--g-muted)}
+.pw-tiles b{font-size:20px;font-variant-numeric:tabular-nums}
+.pw-tiles .hl b{color:var(--g-accent)}
+.pw-toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--g-ink);color:var(--g-surface);padding:10px 16px;border-radius:10px;font-size:14.5px;z-index:90;opacity:0;pointer-events:none;transition:opacity .2s;max-width:min(92vw,560px)}
+.pw-toast.on{opacity:1}
+.pw-empty{color:var(--g-muted);text-align:center;padding:24px}
+.pw .g-tbl td .pw-in,.pw .g-tbl td select{min-height:36px;padding:6px 8px;font-size:14px}
+.pw-cat td{background:var(--g-bg);font-weight:700;font-size:13px;color:var(--g-muted)}
+@media print{.pw-tabs,.pw-add,.pw-btns,.g-btn{display:none!important}}
+</style>
+</head>
+<body class="gp">
+<div class="g-wrap pw">
+  <nav class="pw-tabs" id="tabs" role="tablist" aria-label="Opisy prywatne"></nav>
+  <main id="main" aria-live="polite"><p class="pw-empty">Wczytuję…</p></main>
+  <div id="dls" hidden></div>
+</div>
+<div id="toast" class="pw-toast" role="status" aria-live="polite"></div>
+<script src="wspolne.js?v=1"></script>
+<script src="prywatne-katalog.js?v=1"></script>
+<script>
+/* Opisy prywatne: wizyta z wieloma procedurami → opis do dokumentacji; cennik dla każdego gabinetu, wynagrodzenie lekarza
+   (% po odjęciu kosztów albo kwota), historia, zarobki. Dane zaszyfrowane w przestrzeni użytkownika (G.store); bez punktów NFZ. */
+'use strict';
+if (!G.hint()) G.goLogin('prywatne');
+G.bar('prywatne');
+const $ = s => document.querySelector(s), esc = G.esc, zl = G.zl;
+const KAT = window.PRYW_KATALOG;                                   // etap 6: katalog użytkownika (edycja szablonów)
+const PROC = new Map(KAT.proc.map(p => [p.id, p]));
+const KATN = Object.fromEntries(KAT.kat.map(k => [k.id, k.name]));
+const DOW = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+const S = { ready: false, tab: 'wiz', visits: new Map(), bodies: new Map(), allBodies: false, clinics: [], gabAuto: '',
+  cennik: { v: 1, gab: {} }, ust: { podpis: '', kasuj: 0 }, q: '', kat: '', pickOpen: false,
+  hist: { q: '', gab: '*', kat: '', lim: 40, open: {} }, zar: { r: 'month', od: '', do: '', kat: '', gab: '*', per: 'd' }, cen: { gab: null } };
+let V = newVisit();
+
+/* ---------- pomocnicze ---------- */
+const UIKEY = () => 'pryw@' + (G.hint() || '-') + '.ui';
+function uiLoad() { try { const u = JSON.parse(localStorage.getItem(UIKEY()) || '{}'); if (['wiz', 'hist', 'zar', 'cen', 'ust'].includes(u.tab)) S.tab = u.tab; } catch (e) { } }
+function uiSave() { try { localStorage.setItem(UIKEY(), JSON.stringify({ tab: S.tab })); } catch (e) { } }
+const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const validDate = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s + 'T12:00'));
+const isoAdd = (s, n) => { const d = new Date(s + 'T12:00'); d.setDate(d.getDate() + n); return iso(d); };
+const fmtD = s => s ? s.slice(8, 10) + '.' + s.slice(5, 7) + '.' + s.slice(0, 4) : '';
+const dowOf = s => DOW[new Date(s + 'T12:00').getDay()];
+const uid = () => Math.random().toString(36).slice(2, 9);
+const newId = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const plural = (n, a, b, c) => n === 1 ? a : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? b : c;
+const normIni = s => String(s || '').replace(/[\u0000-\u001f<>]/g, '').trim().toUpperCase().replace(/\s+/g, ' ').slice(0, 10);
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2600); }
+function arm(el, msg) {                                           // drugie kliknięcie potwierdza
+  if (el.dataset.armed === '1') return true;
+  el.dataset.armed = '1'; const old = el.textContent; el.textContent = msg;
+  setTimeout(() => { if (el.isConnected) { el.dataset.armed = ''; el.textContent = old; } }, 3500); return false;
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); return true; }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (_) { } ta.remove(); return ok; }
+}
+
+/* ---------- kwoty (grosze, liczby całkowite) ---------- */
+function parseZl(s) { s = String(s == null ? '' : s).replace(/[\s ]|zł/g, '').replace(',', '.'); if (s === '') return null; const n = +s; return isFinite(n) && n >= 0 && n < 1e7 ? Math.round(n * 100) : NaN; }
+function parsePct(s) { s = String(s == null ? '' : s).replace(',', '.').replace('%', '').trim(); if (s === '') return null; const n = +s; return isFinite(n) && n >= 0 && n <= 100 ? Math.round(n * 100) / 100 : NaN; }
+const zlIn = c => c == null || isNaN(c) ? '' : (c / 100).toFixed(2).replace('.', ',').replace(/,00$/, '');
+const pctIn = p => p == null || isNaN(p) ? '' : String(p).replace('.', ',');
+function payOf(it) {                                               // wartość, podstawa i wynagrodzenie lekarza za pozycję
+  const q = Math.min(99, Math.max(1, Math.round(+it.qty) || 1)), val = (it.c || 0) * q;
+  if (it.m === 'kw') return { val, base: val, pay: (it.kw || 0) * q, q };
+  const base = Math.max(0, val - (it.cost || 0));
+  if (it.p == null || isNaN(it.p)) return { val, base, pay: null, q };
+  return { val, base, pay: Math.floor((base * Math.round(it.p * 100) + 5000) / 10000), q };
+}
+function totals(items) {
+  let val = 0, pay = 0, cost = 0, noPay = 0, noPrice = 0;
+  (items || V.items).forEach(it => { const r = payOf(it); val += r.val; cost += it.m === 'kw' ? 0 : (it.cost || 0); if (r.pay == null) noPay++; else pay += r.pay; if (it.c == null) noPrice++; });
+  return { val, pay, cost, noPay, noPrice };
+}
+
+/* ---------- szablony: {pole}, {?pole}…{/pole}, {!pole}…{/pole} ---------- */
+function tplParse(s) {
+  const re = /\{([?!/]?)([A-Za-z0-9_]+)\}/g, root = { ch: [] }, st = [root]; let last = 0, m;
+  while ((m = re.exec(s))) {
+    if (m.index > last) st[st.length - 1].ch.push(s.slice(last, m.index));
+    last = re.lastIndex;
+    if (m[1] === '?' || m[1] === '!') { const n = { op: m[1], k: m[2], ch: [] }; st[st.length - 1].ch.push(n); st.push(n); }
+    else if (m[1] === '/') { for (let i = st.length - 1; i > 0; i--) if (st[i].k === m[2]) { st.length = i; break; } }
+    else st[st.length - 1].ch.push({ k: m[2] });
+  }
+  if (last < s.length) st[st.length - 1].ch.push(s.slice(last));
+  return root;
+}
+const TPLC = new Map();
+const tplOf = s => { let t = TPLC.get(s); if (!t) { t = tplParse(String(s || '')); TPLC.set(s, t); } return t; };
+function tplRun(n, get) { return n.ch.map(c => typeof c === 'string' ? c : c.op ? (((get(c.k, true) !== '') === (c.op === '?')) ? tplRun(c, get) : '') : get(c.k, false)).join(''); }
+const clean = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().replace(/[.;,]+$/, '').trim();
+const FDI = /^([1-4][1-8]|[5-8][1-5])$/;
+function teethOf(s) { return String(s || '').split(/[^0-9]+/).filter(Boolean); }
+function teethBad(s) { return teethOf(s).filter(t => !FDI.test(t)); }
+const FCACHE = new WeakMap();
+function fieldsOf(p) { let m = FCACHE.get(p); if (!m) { m = new Map((p.fields || []).map(f => [f.k, f])); FCACHE.set(p, m); } return m; }
+const isEmpty = v => v == null || v === '' || v === false || (Array.isArray(v) && !v.length);
+function visible(f, vals) {
+  const s = f.show; if (!s) return true; const v = vals[s.k];
+  if (s.has) return Array.isArray(v) && v.includes(s.has);
+  if (s.eq) return v === s.eq;
+  if (isEmpty(v)) return false;
+  return !(s.not && s.not.includes(v));
+}
+function fmtVal(f, v) {
+  if (v == null) return '';
+  switch (f.t) {
+    case 'multi': { if (!Array.isArray(v)) return ''; const o = f.opts || []; return v.filter(x => typeof x === 'string' && x).sort((a, b) => ((o.indexOf(a) + 1) || 999) - ((o.indexOf(b) + 1) || 999)).join(f.join != null ? f.join : ', '); }
+    case 'bool': return v ? 'tak' : '';
+    case 'tooth': case 'teeth': { const s = clean(v); return /^[\d\s,;]+$/.test(s) ? teethOf(s).join(', ') : s; }
+    case 'rows': { if (!Array.isArray(v)) return ''; const t = tplOf(f.fmt || ''); return v.filter(r => r && Object.values(r).some(x => clean(x))).map(r => clean(tplRun(t, k => clean(r[k])))).join('; '); }
+    case 'num': return clean(v).replace('.', ',');
+    default: return clean(v);
+  }
+}
+function tidy(s) {
+  return s.split('\n').map(l => l.replace(/[ \t]+/g, ' ').replace(/ +([.,;:])/g, '$1').replace(/\.{2,}/g, '.').replace(/,\./g, '.').trim())
+    .filter(l => l && !/^[.,;:–\s-]+$/.test(l)).join('\n');
+}
+function procOf(it) { return PROC.get(it.pid) || it.snap || { id: it.pid, name: it.name || 'Procedura', fields: [], tpl: '' }; }
+function itemText(it) {
+  const p = procOf(it), fm = fieldsOf(p), vals = it.vals || {};
+  return tidy(tplRun(tplOf(p.tpl), (k, test) => {
+    const f = fm.get(k); if (!f) return '';
+    const v = visible(f, vals) ? fmtVal(f, vals[k]) : '';
+    if (v !== '' || test) return v;
+    return f.req && visible(f, vals) ? '[UZUPEŁNIJ: ' + f.l + ']' : '';
+  }));
+}
+function visitText(v) {
+  v = v || V; const parts = v.items.map(itemText).filter(Boolean);
+  if (v.ezla && v.ezla.on) parts.push('Wystawiono zwolnienie lekarskie (e-ZLA)' + (v.ezla.od ? ' od ' + fmtD(v.ezla.od) : '') + (v.ezla.do ? ' do ' + fmtD(v.ezla.do) : '') + '.');
+  if (S.ust.podpis) parts.push(String(S.ust.podpis));
+  return parts.join('\n\n');
+}
+const curText = () => V.edited && typeof V.txt === 'string' ? V.txt : visitText();
+const countMiss = t => (String(t).match(/\[UZUPEŁNIJ/g) || []).length;
+
+/* ---------- wizyta ---------- */
+function newVisit() { return { id: null, no: 0, date: G.today(), gab: 'auto', ini: '', items: [], ezla: { on: false, od: '', do: '' }, txt: null, edited: false, genAtEdit: null, created: null, savedSig: null }; }
+const gabKey = g => g ? g : '-';
+function resolveGab(v) { v = v || V; return v.gab === 'auto' ? (S.gabAuto || '') : v.gab === '-' ? '' : v.gab; }
+function gabName(id) { if (!id) return 'bez gabinetu'; const c = S.clinics.find(x => x.id === id); return c ? c.name : 'gabinet usunięty'; }
+function priceFor(pid, gab) {
+  const g = S.cennik.gab[gabKey(gab)] || {}, e = (g.items || {})[pid] || {};
+  const own = e.m === 'kw' ? 'kw' : (e.p != null ? 'pct' : 'def');
+  return { c: e.c != null ? e.c : null, m: own === 'kw' ? 'kw' : 'pct', p: own === 'kw' ? null : own === 'pct' ? e.p : (g.pct != null ? g.pct : null), kw: own === 'kw' ? (e.kw || 0) : null };
+}
+function newItem(pid) {
+  const p = PROC.get(pid), vals = {};
+  (p.fields || []).forEach(f => { if (f.def !== undefined) vals[f.k] = JSON.parse(JSON.stringify(f.def)); });
+  return Object.assign({ u: uid(), pid, name: p.name, kat: p.kat, vals, qty: 1, cost: 0, man: false, fold: false }, priceFor(pid, resolveGab()));
+}
+function repriceAll() { V.items.forEach(it => { if (!it.man) Object.assign(it, priceFor(it.pid, resolveGab())); }); }
+function metaOf() {
+  const items = V.items.map(it => { const r = payOf(it); return { pid: it.pid, name: it.name, kat: it.kat, qty: r.q, c: it.c, m: it.m, p: it.p, kw: it.kw, cost: it.m === 'kw' ? 0 : (it.cost || 0), val: r.val, pay: r.pay || 0, vals: it.vals }; });
+  const t = totals();
+  return { id: V.id, v: 1, no: V.no, date: V.date, gab: resolveGab(), ini: normIni(V.ini), items, n: items.length, val: t.val, pay: t.pay, cost: t.cost,
+    ezla: V.ezla.on ? { od: V.ezla.od || '', do: V.ezla.do || '' } : null, edited: !!V.edited, body: true, created: V.created };
+}
+const sigOf = () => JSON.stringify([metaOf(), curText()]);
+const dirty = () => V.items.length > 0 && V.savedSig !== sigOf();
+const whoOf = m => m.ini || ('bez inicjałów #' + m.no);
+function nextNo() { let mx = 0; S.visits.forEach(m => { if (m.no > mx) mx = m.no; }); return mx + 1; }
+function sanitizeV(x) {
+  const v = Object.assign(newVisit(), x && typeof x === 'object' ? x : {});
+  v.items = (Array.isArray(v.items) ? v.items : []).filter(it => it && PROC.has(it.pid) || (it && it.snap)).map(it => Object.assign({ u: uid(), vals: {}, qty: 1, cost: 0 }, it, { vals: it.vals && typeof it.vals === 'object' ? it.vals : {} }));
+  if (!validDate(v.date)) v.date = G.today();
+  if (v.id && !S.visits.has(v.id)) { v.id = null; v.savedSig = null; }
+  v.ezla = Object.assign({ on: false, od: '', do: '' }, v.ezla || {});
+  return v;
+}
+
+/* ---------- zapis ---------- */
+async function saveVisit() {
+  if (!V.items.length) { toast('Dodaj co najmniej jedną procedurę.'); return; }
+  if (!validDate(V.date)) { toast('Wpisz poprawną datę wizyty.'); return; }
+  const txt = curText(), now = new Date().toISOString(), isNew = !V.id;
+  const keep = { id: V.id, no: V.no, created: V.created };
+  if (isNew) { V.id = newId(); V.no = nextNo(); V.created = now; }
+  const m = metaOf(); m.at = now; m.miss = countMiss(txt);
+  try {
+    await G.store('opisy').put(V.id, { txt, edited: !!V.edited });
+    await G.store('wizyty').put(V.id, m);
+  } catch (e) { Object.assign(V, keep); toast('Nie udało się zapisać wizyty: ' + (e && e.message || e)); render(); return; }
+  S.visits.set(V.id, m); S.bodies.set(V.id, { txt, edited: !!V.edited });
+  V.savedSig = sigOf(); sumsSched(); draftSaveNow(); render();
+  toast((isNew ? 'Zapisano wizytę: ' : 'Zapisano zmiany: ') + whoOf(m) + ' · ' + zl(m.val) + (m.miss ? ' · ' + m.miss + ' pól do uzupełnienia' : ''));
+}
+async function delVisit(id) {
+  try { await G.store('wizyty').del(id); await G.store('opisy').del(id); } catch (e) { toast('Nie udało się usunąć: ' + (e && e.message || e)); return; }
+  S.visits.delete(id); S.bodies.delete(id); if (V.id === id) { V.id = null; V.savedSig = null; }
+  sumsSched(); render(); toast('Usunięto wizytę.');
+}
+async function bodyOf(id) {
+  if (S.bodies.has(id)) return S.bodies.get(id);
+  let b = null; try { b = await G.store('opisy').get(id); } catch (e) { }
+  if (b) S.bodies.set(id, b); return b;
+}
+let sT = null;
+function sumsSched() { clearTimeout(sT); sT = setTimeout(sumsPublish, 300); }
+function sumsPublish() {                                           // data → gabinet → {n, val, pay} dla strony głównej
+  const map = {};
+  S.visits.forEach(m => { const d = map[m.date] || (map[m.date] = {}), g = d[m.gab || ''] || (d[m.gab || ''] = { n: 0, val: 0, pay: 0 }); g.n++; g.val += m.val || 0; g.pay += m.pay || 0; });
+  return G.sums.put('pryw', map).catch(() => { });
+}
+let cT = null;
+function cennikSave() { clearTimeout(cT); cT = setTimeout(() => G.store('kv').put('pryw:cennik', S.cennik).catch(() => toast('Nie udało się zapisać cennika.')), 250); }
+function ustSave() { return G.store('kv').put('pryw:ust', S.ust).catch(() => toast('Nie udało się zapisać ustawień.')); }
+async function autoPurge() {                                      // RODO: treści opisów starszych niż N dni (kwoty zostają)
+  const n = +S.ust.kasuj || 0; if (!n) return 0; const lim = isoAdd(G.today(), -n); let k = 0;
+  for (const m of S.visits.values()) {
+    if (m.body !== false && m.date < lim) { try { await G.store('opisy').del(m.id); m.body = false; await G.store('wizyty').put(m.id, m); S.bodies.delete(m.id); k++; } catch (e) { } }
+  }
+  return k;
+}
+
+/* ---------- szkic ---------- */
+let dT = null;
+function draftSched() { if (!S.ready) return; clearTimeout(dT); dT = setTimeout(draftSaveNow, 400); }
+function draftSaveNow() { clearTimeout(dT); if (!S.ready) return; return V.items.length ? G.draft.save('pryw', { V }) : G.draft.clear('pryw'); }
+async function draftRestore() {
+  const d = await G.draft.load('pryw'); if (!d || !d.V) return false;
+  if (!(Date.now() - Date.parse(d.at) < 12 * 3600e3)) { G.draft.clear('pryw'); return false; }
+  V = sanitizeV(d.V); return V.items.length > 0;
+}
+
+/* ---------- widok ---------- */
+const TABS = [['wiz', 'Wizyta'], ['hist', 'Historia'], ['zar', 'Zarobki'], ['cen', 'Cennik'], ['ust', 'Ustawienia']];
+function renderTabs() {
+  $('#tabs').innerHTML = TABS.map(([k, n]) => '<button type="button" role="tab" data-tab="' + k + '" aria-selected="' + (S.tab === k) + '">' + n + (k === 'hist' && S.visits.size ? ' (' + S.visits.size + ')' : '') + '</button>').join('');
+}
+function render() {
+  renderTabs(); const m = $('#main'); if (!S.ready) return;
+  const a = document.activeElement, fid = a && a.id, sel = a && 'selectionStart' in a ? [a.selectionStart, a.selectionEnd] : null;
+  try { m.innerHTML = S.tab === 'hist' ? htmlHist() : S.tab === 'zar' ? htmlZar() : S.tab === 'cen' ? htmlCen() : S.tab === 'ust' ? htmlUst() : htmlWiz(); }
+  catch (e) { console.error(e); m.innerHTML = '<div class="g-err">Błąd widoku: ' + esc(e.message) + '</div>'; }
+  if (fid) { const el = document.getElementById(fid); if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); if (sel) try { el.setSelectionRange(sel[0], sel[1]); } catch (e) { } } }
+}
+
+/* ----- Wizyta ----- */
+function gabSelectHTML(id, cur, withAuto) {
+  const auto = S.gabAuto ? 'wg grafiku: ' + gabName(S.gabAuto) : 'wg grafiku: brak dyżuru';
+  return '<select id="' + id + '">' + (withAuto ? '<option value="auto"' + (cur === 'auto' ? ' selected' : '') + '>' + esc(auto) + '</option>' : '') +
+    S.clinics.filter(c => c.active || c.id === cur).map(c => '<option value="' + esc(c.id) + '"' + (c.id === cur ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') +
+    '<option value="-"' + (cur === '-' ? ' selected' : '') + '>bez gabinetu</option></select>';
+}
+function htmlWiz() {
+  let st;
+  if (!V.id) st = V.items.length ? '<b>Nowa wizyta</b> – niezapisana' : 'Dodaj procedury – opis i kwoty policzą się na bieżąco.';
+  else { const m = S.visits.get(V.id); st = '<b>Wizyta ' + esc(whoOf(m || { ini: normIni(V.ini), no: V.no })) + '</b> · ' + (dirty() ? 'niezapisane zmiany' : 'zapisano'); }
+  const q = S.q.trim().toLowerCase();
+  const list = KAT.proc.filter(p => (!S.kat || p.kat === S.kat) && (!q || (p.name + ' ' + (p.desc || '') + ' ' + KATN[p.kat]).toLowerCase().includes(q)));
+  const byKat = KAT.kat.map(k => [k, list.filter(p => p.kat === k.id)]).filter(x => x[1].length);
+  const showList = !V.items.length || S.pickOpen || !!q || !!S.kat;
+  const addCard = '<section class="g-card pw-add"><h2>' + (V.items.length ? 'Dodaj kolejną procedurę' : 'Dodaj procedurę') + '</h2><input class="pw-in" type="search" id="p_q" placeholder="Szukaj: np. ekstrakcja, kanałowe, skaling…" value="' + esc(S.q) + '" autocomplete="off">' +
+    '<div class="pw-chips" role="group" aria-label="Rodzaj zabiegu"><button type="button" class="pw-chip" data-kat="" aria-pressed="' + (!S.kat && showList) + '">Wszystkie</button>' + KAT.kat.map(k => '<button type="button" class="pw-chip" data-kat="' + k.id + '" aria-pressed="' + (S.kat === k.id) + '">' + esc(k.name) + '</button>').join('') + '</div>' +
+    (!showList ? '' : byKat.length ? byKat.map(([k, ps]) => '<div class="pw-kh">' + esc(k.name) + '</div><div class="pw-plist">' + ps.map(p => '<button type="button" class="pw-padd" data-add="' + p.id + '"><span class="plus" aria-hidden="true">+</span><span>' + esc(p.name) + '<small>' + esc(p.desc || '') + '</small></span></button>').join('') + '</div>').join('') : '<p class="pw-note">Brak procedury o tej nazwie.</p>') +
+    (V.items.length && showList ? '<div style="margin-top:8px"><button type="button" class="g-link" data-a="pickhide">Zwiń listę procedur</button></div>' : '') + '</section>';
+  const left = '<section class="g-card"><div class="pw-hrow">' +
+    '<label class="pw-l">Data wizyty<input class="pw-in" type="date" id="v_date" value="' + esc(V.date) + '"></label>' +
+    '<label class="pw-l">Gabinet' + gabSelectHTML('v_gab', V.gab, true) + '</label>' +
+    '<label class="pw-l">Inicjały pacjenta (opcjonalnie)<input class="pw-in" id="v_ini" maxlength="10" autocomplete="off" value="' + esc(V.ini) + '"></label></div>' +
+    '<div class="pw-st" id="v_st">' + st + '</div></section>' +
+    '<div id="items">' + V.items.map(itemHTML).join('') + '</div>' +
+    (V.items.length ? '<section class="g-card"><label class="pw-bool"><input type="checkbox" id="ez_on"' + (V.ezla.on ? ' checked' : '') + '> Wystawiono zwolnienie lekarskie (e-ZLA)</label>' +
+      (V.ezla.on ? '<div class="pw-hrow"><label class="pw-l">od<input class="pw-in" type="date" id="ez_od" value="' + esc(V.ezla.od) + '"></label><label class="pw-l">do<input class="pw-in" type="date" id="ez_do" value="' + esc(V.ezla.do) + '"></label></div>' : '') + '</section>' : '') + addCard;
+  return '<div class="pw-grid"><div>' + left + '</div><aside class="pw-side g-card" id="side">' + sideHTML() + '</aside></div>';
+}
+function sideParts() {
+  const t = totals(), txt = curText(), miss = countMiss(txt), gen = V.edited ? visitText() : null;
+  const sum = '<div class="pw-sum" id="sum"><div><span>Wartość zabiegów</span><b>' + zl(t.val) + '</b></div><div class="pay"><span>Wynagrodzenie lekarza</span><b>' + zl(t.pay) + '</b></div></div>' +
+    (t.noPrice ? '<div class="g-warn" style="margin:0 0 10px">' + t.noPrice + ' ' + plural(t.noPrice, 'procedura nie ma', 'procedury nie mają', 'procedur nie ma') + ' ceny w cenniku tego gabinetu – wpisz cenę przy procedurze albo w zakładce Cennik.</div>' : '') +
+    (t.noPay ? '<div class="g-warn" style="margin:0 0 10px">Brak % wynagrodzenia dla ' + t.noPay + ' ' + plural(t.noPay, 'procedury', 'procedur', 'procedur') + ' – ustaw domyślny % gabinetu w zakładce Cennik.</div>' : '');
+  const head = '<h2><span>Opis wizyty</span>' + (V.items.length ? '<span class="pw-badge' + (miss ? '' : ' ok') + '" id="miss">' + (miss ? miss + ' do uzupełnienia' : 'kompletny') + '</span>' : '') + '</h2>';
+  let body;
+  if (!V.items.length) body = '<p class="pw-note">Tu pojawi się opis do skopiowania do dokumentacji.</p>';
+  else if (V.edited) body = '<textarea class="pw-txted" id="txt_ed" aria-label="Tekst opisu (edycja)">' + esc(V.txt) + '</textarea>' +
+    (gen !== V.genAtEdit ? '<div class="g-warn" style="font-size:13px">Formularz zmienił się po edycji tekstu – Twój tekst nie został nadpisany.</div>' : '<p class="pw-note">Tekst edytowany ręcznie – zmiany w formularzu go nie nadpiszą.</p>');
+  else body = '<pre class="pw-txt" id="txt">' + esc(txt).replace(/\[UZUPEŁNIJ: [^\]]*\]/g, x => '<mark>' + x + '</mark>') + '</pre>';
+  const saved = V.id && !dirty();
+  const btn = V.items.length ? '<div class="pw-btns"><button type="button" class="g-btn" data-a="copy" id="b_copy">Kopiuj opis</button>' +
+    '<button type="button" class="g-btn" data-a="save" id="b_save"' + (saved ? ' disabled' : '') + '>' + (V.id ? (saved ? 'Zapisano ✓' : 'Zapisz zmiany') : 'Zapisz wizytę') + '</button></div>' +
+    '<div class="pw-btns">' + (V.edited ? '<button type="button" class="g-btn ghost sm" data-a="regen" id="b_regen">Wygeneruj tekst z formularza</button>' : '<button type="button" class="g-btn ghost sm" data-a="edit" id="b_edit">Edytuj tekst</button>') +
+    '<button type="button" class="g-btn ghost sm" data-a="new" id="b_new">Nowa wizyta</button></div>' : '';
+  return { sum, head, body, btn };
+}
+const SIDE_LAST = {};
+function sideHTML() {
+  const p = sideParts(); Object.assign(SIDE_LAST, p);
+  return '<div id="s_sum">' + p.sum + '</div><div id="s_head">' + p.head + '</div><div id="s_body">' + p.body + '</div><div id="s_btn">' + p.btn + '</div>' +
+    '<p class="pw-note">Aplikacja przygotowuje propozycję wpisu – sprawdź ją i wklej do dokumentacji w systemie gabinetu. Do opisu trafia tylko to, co zaznaczysz lub wpiszesz.</p>';
+}
+function refreshSide() {                                          // podmienia tylko zmienione części – kliknięcie w przycisk nie ginie
+  if (!$('#side')) return;
+  const p = sideParts(), ed = document.activeElement && document.activeElement.id === 'txt_ed';
+  ['sum', 'head', 'body', 'btn'].forEach(k => { if (k === 'body' && ed) return; if (SIDE_LAST[k] !== p[k]) { const el = $('#s_' + k); if (el) el.innerHTML = p[k]; SIDE_LAST[k] = p[k]; } });
+  const st = $('#v_st'); if (st && V.id) { const m = S.visits.get(V.id); const h = '<b>Wizyta ' + esc(whoOf(m || { ini: normIni(V.ini), no: V.no })) + '</b> · ' + (dirty() ? 'niezapisane zmiany' : 'zapisano'); if (st.innerHTML !== h) st.innerHTML = h; }
+}
+const Q_PERM = [[18, 17, 16, 15, 14, 13, 12, 11], [21, 22, 23, 24, 25, 26, 27, 28], [48, 47, 46, 45, 44, 43, 42, 41], [31, 32, 33, 34, 35, 36, 37, 38]];
+const Q_MLE = [[55, 54, 53, 52, 51], [61, 62, 63, 64, 65], [85, 84, 83, 82, 81], [71, 72, 73, 74, 75]];
+function teethGrid(it, i, f) {
+  const ml = it.pickM != null ? it.pickM : !!f.mleczne, Q = ml ? Q_MLE : Q_PERM, sel = teethOf(it.vals[f.k]);
+  const q = a => '<div class="pw-q">' + a.map(t => '<button type="button" class="pw-tb" data-a="tooth" data-i="' + i + '" data-k="' + f.k + '" data-t="' + t + '" aria-pressed="' + sel.includes(String(t)) + '">' + t + '</button>').join('') + '</div>';
+  return '<div class="pw-teeth" role="group" aria-label="Wybór zęba"><div class="pw-trow">' + q(Q[0]) + q(Q[1]) + '</div><div class="pw-trow">' + q(Q[2]) + q(Q[3]) + '</div>' +
+    '<div class="pw-trow"><button type="button" class="pw-ib" data-a="pickm" data-i="' + i + '">' + (ml ? 'Zęby stałe' : 'Zęby mleczne') + '</button><button type="button" class="pw-ib" data-a="pick" data-i="' + i + '" data-k="">Zamknij</button></div></div>';
+}
+function fieldHTML(it, i, f) {
+  const id = 'f_' + it.u + '_' + f.k, v = it.vals[f.k], d = ' data-i="' + i + '" data-k="' + f.k + '"';
+  const lab = '<label for="' + id + '">' + esc(f.l) + (f.req ? ' <span class="req" title="wymagane">*</span>' : '') + '</label>';
+  const wide = ['area', 'multi', 'rows'].includes(f.t) ? ' w' : '';
+  let h;
+  switch (f.t) {
+    case 'area': h = lab + '<textarea id="' + id + '"' + d + (f.ph ? ' placeholder="' + esc(f.ph) + '"' : '') + ' rows="2">' + esc(v || '') + '</textarea>'; break;
+    case 'num': h = lab + '<input class="pw-in" id="' + id + '"' + d + ' inputmode="decimal" autocomplete="off" value="' + esc(v || '') + '">'; break;
+    case 'select': h = lab + '<select id="' + id + '"' + d + '><option value="">—</option>' + (f.opts || []).map(o => '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select>'; break;
+    case 'bool': return '<div class="pw-f"><label class="pw-bool"><input type="checkbox" id="' + id + '"' + d + (v ? ' checked' : '') + '> ' + esc(f.l) + '</label></div>';
+    case 'multi': { const a = Array.isArray(v) ? v : [];
+      h = '<span class="lb" id="' + id + '">' + esc(f.l) + '</span><div class="pw-ms" role="group" aria-labelledby="' + id + '">' + (f.opts || []).map((o, j) => '<label><input type="checkbox" id="' + id + '_' + j + '"' + d + ' data-o="' + j + '"' + (a.includes(o) ? ' checked' : '') + '>' + esc(o) + '</label>').join('') + '</div>'; break; }
+    case 'tooth': case 'teeth': { const bad = teethBad(v);
+      h = lab + '<div class="pw-tw"><input class="pw-in' + (bad.length ? ' bad' : '') + '" id="' + id + '"' + d + ' inputmode="numeric" autocomplete="off" placeholder="' + (f.t === 'tooth' ? 'np. 36' : 'np. 33, 43') + '" value="' + esc(v || '') + '"><button type="button" class="pw-ib" data-a="pick" data-i="' + i + '" data-k="' + f.k + '" aria-expanded="' + (it.pick === f.k) + '" title="Wybierz na diagramie">▦</button></div>' +
+        (bad.length ? '<span class="pw-warn">Nie ma zęba o numerze ' + esc(bad.join(', ')) + ' (FDI)</span>' : '') + (it.pick === f.k ? teethGrid(it, i, f) : ''); break; }
+    case 'rows': { const rows = Array.isArray(v) ? v : [];
+      h = '<span class="lb">' + esc(f.l) + '</span><table class="pw-rows"><thead><tr>' + f.cols.map(c => '<th>' + esc(c.l) + '</th>').join('') + '<th></th></tr></thead><tbody>' +
+        rows.map((r, j) => '<tr>' + f.cols.map(c => '<td><input class="pw-in" id="' + id + '_' + j + '_' + c.k + '"' + d + ' data-r="' + j + '" data-c="' + c.k + '"' + (c.num ? ' inputmode="decimal"' : '') + (c.ph ? ' placeholder="' + esc(c.ph) + '"' : '') + ' autocomplete="off" value="' + esc(r && r[c.k] || '') + '" aria-label="' + esc(c.l) + ' ' + (j + 1) + '"></td>').join('') +
+          '<td><button type="button" class="pw-ib" data-a="rowdel"' + d + ' data-r="' + j + '" aria-label="Usuń wiersz">✕</button></td></tr>').join('') +
+        '</tbody></table><div><button type="button" class="pw-ib" data-a="rowadd"' + d + '>+ dodaj</button></div>'; break; }
+    default: h = lab + '<input class="pw-in" id="' + id + '"' + d + ' autocomplete="off"' + (f.sug ? ' list="dl_' + esc(procOf(it).id) + '_' + f.k + '"' : '') + (f.ph ? ' placeholder="' + esc(f.ph) + '"' : '') + ' value="' + esc(v || '') + '">';
+  }
+  return '<div class="pw-f' + wide + '">' + h + '</div>';
+}
+function itemHTML(it, i) {
+  const p = procOf(it), r = payOf(it), n = V.items.length;
+  const head = '<div class="pw-ih"><span class="pw-num">' + (i + 1) + '</span><b>' + esc(it.name || p.name) + '</b><span class="pw-kat">' + esc(KATN[it.kat] || '') + '</span><span class="pw-sp"></span>' +
+    '<button type="button" class="pw-ib" data-a="up" data-i="' + i + '"' + (i ? '' : ' disabled') + ' aria-label="W górę">↑</button><button type="button" class="pw-ib" data-a="down" data-i="' + i + '"' + (i < n - 1 ? '' : ' disabled') + ' aria-label="W dół">↓</button>' +
+    '<button type="button" class="pw-ib" data-a="fold" data-i="' + i + '" aria-expanded="' + !it.fold + '">' + (it.fold ? 'Rozwiń' : 'Zwiń') + '</button><button type="button" class="pw-ib danger" data-a="rm" data-i="' + i + '">Usuń</button></div>';
+  const body = it.fold ? '<div class="pw-fold">' + esc(itemText(it).split('\n')[0] || '') + '</div>' :
+    '<div class="pw-fields">' + (p.fields || []).filter(f => visible(f, it.vals)).map(f => fieldHTML(it, i, f)).join('') + '</div>';
+  const pid = 'pr_' + it.u;
+  const price = '<div class="pw-price"><label class="pw-l">Ilość<input class="pw-in q" id="' + pid + '_q" data-pr="qty" data-i="' + i + '" inputmode="numeric" value="' + esc(String(it.qty || 1)) + '"></label>' +
+    '<label class="pw-l">Cena (zł)<input class="pw-in n" id="' + pid + '_c" data-pr="c" data-i="' + i + '" inputmode="decimal" value="' + zlIn(it.c) + '"' + (it.c == null ? ' placeholder="brak"' : '') + '></label>' +
+    '<label class="pw-l">Wynagrodzenie<select id="' + pid + '_m" data-pr="m" data-i="' + i + '"><option value="pct"' + (it.m !== 'kw' ? ' selected' : '') + '>% od wartości</option><option value="kw"' + (it.m === 'kw' ? ' selected' : '') + '>kwota (zł)</option></select></label>' +
+    (it.m === 'kw' ? '<label class="pw-l">Kwota / szt. (zł)<input class="pw-in n" id="' + pid + '_kw" data-pr="kw" data-i="' + i + '" inputmode="decimal" value="' + zlIn(it.kw) + '"></label>'
+      : '<label class="pw-l">%<input class="pw-in q" id="' + pid + '_p" data-pr="p" data-i="' + i + '" inputmode="decimal" value="' + pctIn(it.p) + '"' + (it.p == null ? ' placeholder="—"' : '') + '></label>' +
+      '<label class="pw-l">Koszty (lab., implant) zł<input class="pw-in n" id="' + pid + '_k" data-pr="cost" data-i="' + i + '" inputmode="decimal" value="' + zlIn(it.cost || null) + '"></label>') +
+    '<div class="pw-pay" id="' + pid + '_pay">' + payLine(r, it) + '</div></div>';
+  return '<section class="g-card pw-item" id="it-' + it.u + '" aria-label="' + esc(it.name || p.name) + '">' + head + body + price + '</section>';
+}
+function payLine(r, it) { return 'wartość ' + zl(r.val) + (it.m !== 'kw' && it.cost ? ' − koszty ' + zl(it.cost) : '') + '<br>lekarz: <b>' + (r.pay == null ? '—' : zl(r.pay)) + '</b>'; }
+function datalists() {                                            // podpowiedzi pól tekstowych (jedna lista na pole procedury)
+  $('#dls').innerHTML = KAT.proc.map(p => (p.fields || []).filter(f => f.sug).map(f => '<datalist id="dl_' + p.id + '_' + f.k + '">' + f.sug.map(s => '<option value="' + esc(s) + '">').join('') + '</datalist>').join('')).join('');
+}
+
+/* ----- Historia ----- */
+function histList() {
+  const h = S.hist, q = h.q.trim().toLowerCase();
+  return [...S.visits.values()].filter(m => (h.gab === '*' || (m.gab || '-') === h.gab) && (!h.kat || (m.items || []).some(x => x.kat === h.kat)) &&
+    (!q || (m.ini || '').toLowerCase().includes(q) || (m.items || []).some(x => (x.name || '').toLowerCase().includes(q)) || ((S.bodies.get(m.id) || {}).txt || '').toLowerCase().includes(q)))
+    .sort((a, b) => b.date.localeCompare(a.date) || String(b.created).localeCompare(String(a.created)));
+}
+function htmlHist() {
+  const h = S.hist, all = histList(), list = all.slice(0, h.lim);
+  let out = '<section class="g-card"><div class="pw-hrow"><label class="pw-l">Szukaj (inicjały, procedura, treść opisu)<input class="pw-in" type="search" id="h_q" value="' + esc(h.q) + '" autocomplete="off"></label>' +
+    '<label class="pw-l">Gabinet<select id="h_gab"><option value="*">wszystkie</option>' + S.clinics.map(c => '<option value="' + esc(c.id) + '"' + (h.gab === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '<option value="-"' + (h.gab === '-' ? ' selected' : '') + '>bez gabinetu</option></select></label>' +
+    '<label class="pw-l">Rodzaj zabiegu<select id="h_kat"><option value="">wszystkie</option>' + KAT.kat.map(k => '<option value="' + k.id + '"' + (h.kat === k.id ? ' selected' : '') + '>' + esc(k.name) + '</option>').join('') + '</select></label></div>' +
+    '<p class="pw-st">' + all.length + ' ' + plural(all.length, 'wizyta', 'wizyty', 'wizyt') + (h.q && !S.allBodies ? ' · szukam też w treści opisów…' : '') + '</p></section>';
+  if (!list.length) return out + '<p class="pw-empty">' + (S.visits.size ? 'Brak wizyt pasujących do filtrów.' : 'Nie ma jeszcze zapisanych wizyt.') + '</p>';
+  let day = '';
+  list.forEach(m => {
+    if (m.date !== day) {
+      day = m.date; const ds = all.filter(x => x.date === day), t = ds.reduce((s, x) => [s[0] + (x.val || 0), s[1] + (x.pay || 0)], [0, 0]);
+      out += '<div class="pw-day">' + dowOf(day).replace(/^./, c => c.toUpperCase()) + ', ' + fmtD(day) + '<span>' + ds.length + ' ' + plural(ds.length, 'wizyta', 'wizyty', 'wizyt') + ' · wartość ' + zl(t[0]) + ' · lekarz ' + zl(t[1]) + '</span></div>';
+    }
+    const b = S.bodies.get(m.id), open = h.open[m.id];
+    out += '<article class="pw-h" id="h-' + m.id + '"><div class="pw-hm"><div><b>' + esc(whoOf(m)) + '</b> <span class="g-muted g-small">· ' + esc(gabName(m.gab)) + '</span>' +
+      '<div class="pw-hp">' + (m.items || []).map(x => esc(x.name) + (x.qty > 1 ? ' ×' + x.qty : '')).join(' · ') + '</div></div>' +
+      '<div class="r"><b>' + zl(m.pay || 0) + '</b><div class="g-small g-muted">wartość ' + zl(m.val || 0) + '</div></div></div>' +
+      (m.miss ? '<div class="pw-note">Opis zapisano z ' + m.miss + ' ' + plural(m.miss, 'polem', 'polami', 'polami') + ' [UZUPEŁNIJ].</div>' : '') +
+      '<div class="pw-btns">' + (m.body !== false ? '<button type="button" class="pw-ib" data-a="hcopy" data-id="' + m.id + '">Kopiuj opis</button><button type="button" class="pw-ib" data-a="hshow" data-id="' + m.id + '" aria-expanded="' + !!open + '">' + (open ? 'Ukryj opis' : 'Pokaż opis') + '</button>' : '<span class="pw-note">treść opisu usunięta (ustawienie prywatności)</span>') +
+      '<button type="button" class="pw-ib" data-a="hopen" data-id="' + m.id + '">Otwórz i popraw</button><button type="button" class="pw-ib" data-a="huse" data-id="' + m.id + '">Użyj jako szablonu</button><button type="button" class="pw-ib danger" data-a="hdel" data-id="' + m.id + '">Usuń</button></div>' +
+      (open ? '<pre class="pw-txt" style="margin-top:8px">' + esc(b ? b.txt : 'Wczytuję…') + '</pre>' : '') + '</article>';
+  });
+  if (all.length > list.length) out += '<div style="text-align:center"><button type="button" class="g-btn ghost sm" data-a="hmore">Pokaż kolejne (' + (all.length - list.length) + ')</button></div>';
+  return out;
+}
+
+/* ----- Zarobki ----- */
+const RN = { today: 'Dziś', week: 'Ten tydzień', month: 'Ten miesiąc', prev: 'Poprzedni miesiąc', year: 'Ten rok', all: 'Wszystko', own: 'Od – do' };
+function rangeOf(r) {
+  const t = new Date(), y = t.getFullYear(), mo = t.getMonth();
+  if (r === 'today') return [iso(t), iso(t)];
+  if (r === 'week') { const dw = (t.getDay() + 6) % 7; return [iso(new Date(y, mo, t.getDate() - dw)), iso(new Date(y, mo, t.getDate() - dw + 6))]; }
+  if (r === 'prev') return [iso(new Date(y, mo - 1, 1)), iso(new Date(y, mo, 0))];
+  if (r === 'year') return [y + '-01-01', y + '-12-31'];
+  if (r === 'all') return ['0000-01-01', '9999-12-31'];
+  if (r === 'own') return [validDate(S.zar.od) ? S.zar.od : '0000-01-01', validDate(S.zar.do) ? S.zar.do : '9999-12-31'];
+  return [iso(new Date(y, mo, 1)), iso(new Date(y, mo + 1, 0))];
+}
+const weekOf = s => { const d = new Date(s + 'T12:00'); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return iso(d); };
+function zarData() {
+  const z = S.zar, [a, b] = rangeOf(z.r), rows = [];
+  S.visits.forEach(m => {
+    if (m.date < a || m.date > b || (z.gab !== '*' && (m.gab || '-') !== z.gab)) return;
+    const its = (m.items || []).filter(x => !z.kat || x.kat === z.kat); if (!its.length) return;
+    rows.push({ m, its, val: its.reduce((s, x) => s + (x.val || 0), 0), pay: its.reduce((s, x) => s + (x.pay || 0), 0), cost: its.reduce((s, x) => s + (x.cost || 0), 0) });
+  });
+  return { a, b, rows };
+}
+function htmlZar() {
+  const z = S.zar, { a, b, rows } = zarData();
+  const T = rows.reduce((s, r) => ({ n: s.n + 1, p: s.p + r.its.reduce((q, x) => q + (x.qty || 1), 0), val: s.val + r.val, pay: s.pay + r.pay, cost: s.cost + r.cost }), { n: 0, p: 0, val: 0, pay: 0, cost: 0 });
+  const grp = (key) => { const m = new Map(); rows.forEach(r => { const k = key(r); const o = m.get(k) || { n: 0, p: 0, val: 0, pay: 0 }; o.n++; o.p += r.its.reduce((q, x) => q + (x.qty || 1), 0); o.val += r.val; o.pay += r.pay; m.set(k, o); }); return m; };
+  const byGab = grp(r => r.m.gab || '');
+  const byProc = new Map(); rows.forEach(r => r.its.forEach(x => { const k = x.kat + '|' + x.name; const o = byProc.get(k) || { kat: x.kat, name: x.name, n: 0, val: 0, pay: 0 }; o.n += x.qty || 1; o.val += x.val || 0; o.pay += x.pay || 0; byProc.set(k, o); }));
+  const per = z.per, byPer = grp(r => per === 'm' ? r.m.date.slice(0, 7) : per === 'w' ? weekOf(r.m.date) : r.m.date);
+  const perName = k => per === 'm' ? k.slice(5, 7) + '.' + k.slice(0, 4) : per === 'w' ? fmtD(k) + ' – ' + fmtD(isoAdd(k, 6)) : dowOf(k).slice(0, 3) + '. ' + fmtD(k);
+  const tbl = (head, body, foot) => '<div class="g-tblw"><table class="g-tbl"><thead><tr>' + head.map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + body + '</tbody>' + (foot ? '<tfoot><tr>' + foot.map(x => '<td>' + x + '</td>').join('') + '</tr></tfoot>' : '') + '</table></div>';
+  let out = '<section class="g-card"><div class="g-row" style="justify-content:space-between"><div class="g-seg" role="group" aria-label="Okres">' + Object.keys(RN).map(k => '<button type="button" data-zr="' + k + '" class="' + (z.r === k ? 'on' : '') + '" aria-pressed="' + (z.r === k) + '">' + RN[k] + '</button>').join('') + '</div></div>' +
+    (z.r === 'own' ? '<div class="pw-hrow" style="margin-top:10px;max-width:420px"><label class="pw-l">od<input class="pw-in" type="date" id="z_od" value="' + esc(z.od) + '"></label><label class="pw-l">do<input class="pw-in" type="date" id="z_do" value="' + esc(z.do) + '"></label></div>' : '') +
+    '<div class="pw-hrow" style="margin-top:10px"><label class="pw-l">Gabinet<select id="z_gab"><option value="*">wszystkie</option>' + S.clinics.map(c => '<option value="' + esc(c.id) + '"' + (z.gab === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '<option value="-"' + (z.gab === '-' ? ' selected' : '') + '>bez gabinetu</option></select></label>' +
+    '<label class="pw-l">Rodzaj zabiegu<select id="z_kat"><option value="">wszystkie</option>' + KAT.kat.map(k => '<option value="' + k.id + '"' + (z.kat === k.id ? ' selected' : '') + '>' + esc(k.name) + '</option>').join('') + '</select></label></div>' +
+    '<p class="pw-st">' + (z.r === 'all' ? 'cała historia' : fmtD(a) + ' – ' + fmtD(b)) + '</p></section>';
+  out += '<div class="pw-tiles" id="z_tiles"><div class="hl"><span>Wynagrodzenie lekarza</span><b>' + zl(T.pay) + '</b></div><div><span>Wartość zabiegów</span><b>' + zl(T.val) + '</b></div>' +
+    '<div><span>Wizyty</span><b>' + T.n + '</b></div><div><span>Procedury</span><b>' + T.p + '</b></div><div><span>Średnio na wizytę (lekarz)</span><b>' + (T.n ? zl(Math.round(T.pay / T.n)) : '—') + '</b></div>' +
+    (T.cost ? '<div><span>Koszty odliczone</span><b>' + zl(T.cost) + '</b></div>' : '') + '</div>';
+  if (!rows.length) return out + '<p class="pw-empty">Brak wizyt w tym okresie.</p>';
+  out += '<section class="g-card"><h2>Gabinety</h2>' + tbl(['Gabinet', 'Wizyty', 'Procedury', 'Wartość', 'Lekarz'], [...byGab.entries()].sort((x, y) => y[1].pay - x[1].pay).map(([k, o]) => '<tr><td>' + esc(k ? gabName(k) : 'Bez gabinetu') + '</td><td>' + o.n + '</td><td>' + o.p + '</td><td>' + zl(o.val) + '</td><td>' + zl(o.pay) + '</td></tr>').join(''), ['Razem', T.n, T.p, zl(T.val), zl(T.pay)]) + '</section>';
+  out += '<section class="g-card"><h2>Rodzaj zabiegu</h2>' + tbl(['Procedura', 'Liczba', 'Wartość', 'Lekarz'], KAT.kat.concat([{ id: '?', name: 'Inne' }]).map(k => { const ps = [...byProc.values()].filter(o => (KATN[o.kat] ? o.kat : '?') === k.id).sort((x, y) => y.pay - x.pay); if (!ps.length) return ''; const s = ps.reduce((q, o) => [q[0] + o.n, q[1] + o.val, q[2] + o.pay], [0, 0, 0]);
+    return '<tr class="pw-cat"><td>' + esc(k.name) + '</td><td>' + s[0] + '</td><td>' + zl(s[1]) + '</td><td>' + zl(s[2]) + '</td></tr>' + ps.map(o => '<tr><td>' + esc(o.name) + '</td><td>' + o.n + '</td><td>' + zl(o.val) + '</td><td>' + zl(o.pay) + '</td></tr>').join(''); }).join('')) + '</section>';
+  out += '<section class="g-card"><div class="g-row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Okresy</h2><div class="g-seg" role="group" aria-label="Podział"><button type="button" data-zp="d" class="' + (per === 'd' ? 'on' : '') + '">Dni</button><button type="button" data-zp="w" class="' + (per === 'w' ? 'on' : '') + '">Tygodnie</button><button type="button" data-zp="m" class="' + (per === 'm' ? 'on' : '') + '">Miesiące</button></div></div>' +
+    tbl([per === 'm' ? 'Miesiąc' : per === 'w' ? 'Tydzień' : 'Dzień', 'Wizyty', 'Procedury', 'Wartość', 'Lekarz', 'Średnio / wizytę'], [...byPer.entries()].sort((x, y) => y[0].localeCompare(x[0])).map(([k, o]) => '<tr><td>' + perName(k) + '</td><td>' + o.n + '</td><td>' + o.p + '</td><td>' + zl(o.val) + '</td><td>' + zl(o.pay) + '</td><td>' + zl(Math.round(o.pay / o.n)) + '</td></tr>').join('')) + '</section>';
+  return out;
+}
+
+/* ----- Cennik ----- */
+const cenClinics = () => S.clinics.filter(c => c.active || S.cennik.gab[c.id]);
+function cenGab() { const ids = cenClinics().map(c => c.id).concat(['-']); if (!ids.includes(S.cen.gab)) S.cen.gab = ids.length > 1 ? (S.gabAuto && ids.includes(S.gabAuto) ? S.gabAuto : ids[0]) : '-'; return S.cen.gab; }
+function htmlCen() {
+  const gk = cenGab(), g = S.cennik.gab[gk] || { pct: null, items: {} }, items = g.items || {};
+  const others = cenClinics().map(c => [c.id, c.name]).concat([['-', 'bez gabinetu']]).filter(x => x[0] !== gk && S.cennik.gab[x[0]]);
+  let out = '<section class="g-card"><h2>Cennik</h2><p class="pw-note" style="margin-top:0">Każdy gabinet ma własny cennik. Cena i wynagrodzenie podpowiadają się przy dodaniu procedury do wizyty – przy wizycie można je zmienić (cennik zostaje bez zmian). Zmiana cennika nie zmienia zapisanych wizyt.</p>' +
+    '<div class="g-seg" role="group" aria-label="Gabinet" style="margin:10px 0">' + cenClinics().map(c => '<button type="button" data-cg="' + esc(c.id) + '" class="' + (gk === c.id ? 'on' : '') + '" aria-pressed="' + (gk === c.id) + '">' + esc(c.name) + '</button>').join('') + '<button type="button" data-cg="-" class="' + (gk === '-' ? 'on' : '') + '" aria-pressed="' + (gk === '-') + '">bez gabinetu</button></div>' +
+    (S.clinics.length ? '' : '<div class="g-warn">Nie masz jeszcze gabinetów – dodaj je w Kalendarzu (Ustawienia). Do tego czasu działa cennik „bez gabinetu”.</div>') +
+    '<div class="pw-hrow" style="max-width:640px"><label class="pw-l">Domyślne wynagrodzenie lekarza w tym gabinecie (%)<input class="pw-in" id="c_pct" inputmode="decimal" value="' + pctIn(g.pct) + '" placeholder="np. 40"></label>' +
+    (others.length ? '<label class="pw-l">Skopiuj cennik z<span class="pw-tw"><select id="c_from">' + others.map(x => '<option value="' + esc(x[0]) + '">' + esc(x[1]) + '</option>').join('') + '</select><button type="button" class="pw-ib" data-a="ccopy">Kopiuj</button></span></label>' : '') + '</div>' +
+    '<p class="pw-note">Wynagrodzenie „%” liczy się od wartości zabiegu po odjęciu kosztów wpisanych przy wizycie (np. laboratorium, implant); „kwota” – stała kwota za sztukę.</p></section>';
+  out += '<section class="g-card"><div class="g-tblw"><table class="g-tbl" id="c_tbl"><thead><tr><th>Procedura</th><th>Cena (zł)</th><th>Wynagrodzenie</th><th>Wartość</th><th>Lekarz</th></tr></thead><tbody>' +
+    KAT.kat.map(k => '<tr class="pw-cat"><td colspan="5">' + esc(k.name) + '</td></tr>' + KAT.proc.filter(p => p.kat === k.id).map(p => {
+      const e = items[p.id] || {}, mode = e.m === 'kw' ? 'kw' : e.p != null ? 'pct' : 'def', pr = priceFor(p.id, gk === '-' ? '' : gk), r = payOf(Object.assign({ qty: 1, cost: 0 }, pr));
+      return '<tr><td>' + esc(p.name) + '</td><td><input class="pw-in" style="width:96px" data-cc="' + p.id + '" inputmode="decimal" value="' + zlIn(e.c) + '" aria-label="Cena: ' + esc(p.name) + '"></td>' +
+        '<td><span class="pw-tw" style="justify-content:flex-end"><select data-cm="' + p.id + '" aria-label="Wynagrodzenie: ' + esc(p.name) + '"><option value="def"' + (mode === 'def' ? ' selected' : '') + '>domyślny %</option><option value="pct"' + (mode === 'pct' ? ' selected' : '') + '>własny %</option><option value="kw"' + (mode === 'kw' ? ' selected' : '') + '>kwota zł</option></select>' +
+        (mode === 'def' ? '' : '<input class="pw-in" style="width:80px" data-cv="' + p.id + '" inputmode="decimal" value="' + (mode === 'kw' ? zlIn(e.kw) : pctIn(e.p)) + '" aria-label="' + (mode === 'kw' ? 'Kwota' : 'Procent') + ': ' + esc(p.name) + '">') + '</span></td>' +
+        '<td>' + (e.c != null ? zl(r.val) : '—') + '</td><td>' + (e.c != null && r.pay != null ? zl(r.pay) : '—') + '</td></tr>';
+    }).join('')).join('') + '</tbody></table></div></section>';
+  return out;
+}
+function cenEntry(pid) { const gk = cenGab(), g = S.cennik.gab[gk] || (S.cennik.gab[gk] = { pct: null, items: {} }); g.items = g.items || {}; return g.items[pid] || (g.items[pid] = {}); }
+
+/* ----- Ustawienia ----- */
+function htmlUst() {
+  const nb = [...S.visits.values()].filter(m => m.body !== false).length;
+  return '<section class="g-card"><h2>Podpis pod opisem</h2><p class="pw-note" style="margin-top:0">Dopisywany na końcu każdego opisu (np. „lek. dent. Imię Nazwisko”). Zostaw puste, jeśli system gabinetu dodaje autora sam.</p>' +
+    '<input class="pw-in" id="u_podpis" maxlength="120" value="' + esc(S.ust.podpis || '') + '" style="max-width:480px"></section>' +
+    '<section class="g-card"><h2>Prywatność</h2><label class="pw-l" style="max-width:480px">Usuwaj treść opisów starszych niż<select id="u_kasuj">' + [[0, 'nigdy'], [30, '30 dni'], [90, '90 dni'], [180, '180 dni'], [365, '1 rok']].map(x => '<option value="' + x[0] + '"' + (+S.ust.kasuj === x[0] ? ' selected' : '') + '>' + x[1] + '</option>').join('') + '</select></label>' +
+    '<p class="pw-note">Kwoty, daty i lista procedur zostają (zarobki liczą się dalej). Dokumentacją medyczną jest wpis w systemie gabinetu – tu przechowujesz tylko kopię roboczą. Teraz zapisanych treści: ' + nb + '.</p></section>' +
+    '<section class="g-card"><h2>Dane</h2><p class="pw-note" style="margin-top:0">Wizyty, opisy i cenniki są zaszyfrowane kluczem Twojego konta i zapisane tylko w tej przeglądarce. Kopia całości i eksport do CSV – w kolejnym etapie.</p></section>';
+}
+
+/* ---------- zdarzenia ---------- */
+function setVal(it, f, el) {
+  if (f.t === 'multi') { const o = f.opts[+el.dataset.o], a = Array.isArray(it.vals[f.k]) ? it.vals[f.k].slice() : []; const i = a.indexOf(o); if (el.checked && i < 0) a.push(o); if (!el.checked && i >= 0) a.splice(i, 1); it.vals[f.k] = a; }
+  else if (f.t === 'bool') it.vals[f.k] = el.checked;
+  else if (f.t === 'rows') { const a = Array.isArray(it.vals[f.k]) ? it.vals[f.k] : (it.vals[f.k] = []); const r = a[+el.dataset.r] || (a[+el.dataset.r] = {}); r[el.dataset.c] = el.value; }
+  else it.vals[f.k] = el.value;
+}
+const isDep = (p, k) => (p.fields || []).some(f => f.show && f.show.k === k);
+function onField(el, ev) {
+  const i = +el.dataset.i, it = V.items[i]; if (!it) return;
+  const p = procOf(it), f = fieldsOf(p).get(el.dataset.k); if (!f) return;
+  const before = JSON.stringify(it.vals[f.k] === undefined ? null : it.vals[f.k]);
+  setVal(it, f, el);
+  if (ev === 'change' && (f.t === 'tooth' || f.t === 'teeth')) {
+    const norm = /^[\d\s,;]+$/.test(el.value) ? teethOf(el.value).join(', ') : el.value;
+    const showBad = !!teethBad(norm).length !== el.classList.contains('bad');
+    if (norm !== el.value || showBad) { it.vals[f.k] = norm; rerenderItem(i); refreshSide(); draftSched(); }
+    return;
+  }
+  if (JSON.stringify(it.vals[f.k] === undefined ? null : it.vals[f.k]) === before) return;   // „change” po „input” – nic nowego
+  if (ev === 'change' && isDep(p, f.k)) rerenderItem(i);
+  refreshSide(); draftSched();
+}
+function onPrice(el) {
+  const i = +el.dataset.i, it = V.items[i]; if (!it) return; const k = el.dataset.pr; let v;
+  if (k === 'qty') { v = Math.round(+el.value); it.qty = v >= 1 && v <= 99 ? v : 1; }
+  else if (k === 'c' || k === 'kw' || k === 'cost') { v = parseZl(el.value); el.classList.toggle('bad', isNaN(v)); if (isNaN(v)) return; it[k] = k === 'cost' ? (v || 0) : v; it.man = true; }
+  else if (k === 'p') { v = parsePct(el.value); el.classList.toggle('bad', isNaN(v)); if (isNaN(v)) return; it.p = v; it.man = true; }
+  else if (k === 'm') { it.m = el.value === 'kw' ? 'kw' : 'pct'; it.man = true; if (it.m === 'kw' && it.kw == null) it.kw = 0; if (it.m === 'pct' && it.p == null) it.p = priceFor(it.pid, resolveGab()).p; rerenderItem(i); }
+  const pe = document.getElementById('pr_' + it.u + '_pay'); if (pe) pe.innerHTML = payLine(payOf(it), it);
+  refreshSide(); draftSched();
+}
+function rerenderItem(i) {
+  const it = V.items[i], el = document.getElementById('it-' + it.u); if (!el) { render(); return; }
+  const a = document.activeElement, fid = a && a.id; el.outerHTML = itemHTML(it, i);
+  if (fid) { const n = document.getElementById(fid); if (n) n.focus({ preventScroll: true }); }
+}
+function addItem(pid) {
+  if (!PROC.has(pid)) return; const it = newItem(pid); V.items.push(it); S.q = ''; S.kat = ''; S.pickOpen = false; render(); draftSched();
+  const el = document.getElementById('it-' + it.u); if (el) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); const f = el.querySelector('input,select,textarea'); if (f) f.focus({ preventScroll: true }); }
+}
+function loadVisit(m, asTemplate) {
+  const b = S.bodies.get(m.id);
+  V = newVisit();
+  V.items = (m.items || []).map(x => { const it = { u: uid(), pid: x.pid, name: x.name, kat: x.kat, vals: JSON.parse(JSON.stringify(x.vals || {})), qty: x.qty || 1, cost: x.cost || 0, c: x.c, m: x.m, p: x.p, kw: x.kw, man: true, fold: false };
+    if (!PROC.has(x.pid)) it.snap = { id: x.pid, name: x.name, fields: [], tpl: '' }; return it; });
+  if (asTemplate) { V.items.forEach(it => { it.man = false; }); repriceAll(); toast('Nowa wizyta na podstawie: ' + whoOf(m) + ' – sprawdź pola i zapisz.'); }
+  else {
+    Object.assign(V, { id: m.id, no: m.no, date: m.date, gab: m.gab || '-', ini: m.ini || '', created: m.created, ezla: m.ezla ? { on: true, od: m.ezla.od || '', do: m.ezla.do || '' } : { on: false, od: '', do: '' } });
+    if (m.edited && b) { V.edited = true; V.txt = b.txt; V.genAtEdit = visitText(); }
+    V.savedSig = sigOf();
+  }
+  S.tab = 'wiz'; uiSave(); render(); draftSched(); window.scrollTo(0, 0);
+}
+let searchT = null, ustT = null;
+document.addEventListener('input', e => {
+  const t = e.target; if (!S.ready) return;
+  if (t.id === 'p_q') { S.q = t.value; clearTimeout(searchT); searchT = setTimeout(() => render(), 120); return; }
+  if (t.id === 'h_q') { S.hist.q = t.value; S.hist.lim = 40; clearTimeout(searchT); searchT = setTimeout(async () => { if (S.hist.q && !S.allBodies) { await loadAllBodies(); } render(); }, 200); return; }
+  if (t.id === 'txt_ed') { V.txt = t.value; refreshSide(); draftSched(); return; }
+  if (t.id === 'v_ini') { V.ini = t.value; refreshSide(); draftSched(); return; }
+  if (t.dataset.pr) { onPrice(t); return; }
+  if (t.dataset.k && t.dataset.i != null && !['checkbox', 'select-one'].includes(t.type)) { onField(t, 'input'); return; }
+  if (t.dataset.cc || t.dataset.cv || t.id === 'c_pct') onCen(t, false);
+  if (t.id === 'u_podpis') { S.ust.podpis = t.value.slice(0, 120); clearTimeout(ustT); ustT = setTimeout(ustSave, 300); }
+});
+document.addEventListener('change', async e => {
+  const t = e.target; if (!S.ready) return;
+  if (t.id === 'v_date') { if (validDate(t.value)) { V.date = t.value; S.gabAuto = await G.dayClinic(V.date, V.date === G.today() ? new Date().toTimeString().slice(0, 5) : '').catch(() => '') || ''; if (V.gab === 'auto') repriceAll(); } render(); draftSched(); return; }
+  if (t.id === 'v_gab') { V.gab = t.value; repriceAll(); render(); draftSched(); return; }
+  if (t.id === 'ez_on') { V.ezla.on = t.checked; render(); draftSched(); return; }
+  if (t.id === 'ez_od' || t.id === 'ez_do') { V.ezla[t.id.slice(3)] = t.value; refreshSide(); draftSched(); return; }
+  if (t.dataset.pr === 'm') { onPrice(t); return; }
+  if (t.dataset.pr) { t.value = t.dataset.pr === 'qty' ? String(V.items[+t.dataset.i].qty) : t.value; return; }
+  if (t.dataset.k && t.dataset.i != null) { onField(t, 'change'); return; }
+  if (t.id === 'h_gab') { S.hist.gab = t.value; render(); return; }
+  if (t.id === 'h_kat') { S.hist.kat = t.value; render(); return; }
+  if (t.id === 'z_gab' || t.id === 'z_kat') { S.zar[t.id.slice(2)] = t.value; render(); return; }
+  if (t.id === 'z_od' || t.id === 'z_do') { S.zar[t.id.slice(2)] = t.value; render(); return; }
+  if (t.dataset.cm || t.dataset.cc || t.dataset.cv || t.id === 'c_pct') { onCen(t, true); return; }
+  if (t.id === 'u_kasuj') { S.ust.kasuj = +t.value || 0; await ustSave(); const n = await autoPurge(); if (n) { toast('Usunięto treść ' + n + ' starszych opisów (kwoty zostały).'); sumsSched(); } render(); return; }
+});
+function onCen(t, commit) {
+  if (t.id === 'c_pct') { const v = parsePct(t.value); t.classList.toggle('bad', isNaN(v)); if (isNaN(v)) return; const gk = cenGab(); (S.cennik.gab[gk] || (S.cennik.gab[gk] = { pct: null, items: {} })).pct = v; cennikSave(); if (commit) render(); return; }
+  const pid = t.dataset.cc || t.dataset.cv || t.dataset.cm, e = cenEntry(pid);
+  if (t.dataset.cc) { const v = parseZl(t.value); t.classList.toggle('bad', isNaN(v)); if (isNaN(v)) return; if (v == null) delete e.c; else e.c = v; }
+  else if (t.dataset.cm) { if (t.value === 'def') { delete e.m; delete e.p; delete e.kw; } else if (t.value === 'pct') { e.m = 'pct'; e.p = e.p != null ? e.p : (S.cennik.gab[cenGab()].pct != null ? S.cennik.gab[cenGab()].pct : 0); delete e.kw; } else { e.m = 'kw'; e.kw = e.kw || 0; delete e.p; } }
+  else if (t.dataset.cv) { if (e.m === 'kw') { const v = parseZl(t.value); t.classList.toggle('bad', isNaN(v)); if (isNaN(v)) return; e.kw = v || 0; } else { const v = parsePct(t.value); t.classList.toggle('bad', isNaN(v)); if (isNaN(v)) return; if (v == null) { delete e.m; delete e.p; } else { e.m = 'pct'; e.p = v; } } }
+  cennikSave(); if (commit) render();
+}
+async function loadAllBodies() { try { const all = await G.store('opisy').all(); all.forEach(([k, b]) => S.bodies.set(k, b)); S.allBodies = true; } catch (e) { } }
+document.addEventListener('click', async e => {
+  const t = e.target.closest('button'); if (!t || !S.ready) return;
+  if (t.dataset.tab) { S.tab = t.dataset.tab; uiSave(); render(); window.scrollTo(0, 0); return; }
+  if (t.dataset.add) { addItem(t.dataset.add); return; }
+  if (t.dataset.kat != null && t.classList.contains('pw-chip')) { S.kat = t.dataset.kat; S.pickOpen = true; render(); return; }
+  if (t.dataset.zr) { S.zar.r = t.dataset.zr; render(); return; }
+  if (t.dataset.zp) { S.zar.per = t.dataset.zp; render(); return; }
+  if (t.dataset.cg) { S.cen.gab = t.dataset.cg; render(); return; }
+  const a = t.dataset.a; if (!a) return; const i = +t.dataset.i, it = V.items[i];
+  if (a === 'pickhide') { S.pickOpen = false; S.kat = ''; S.q = ''; render(); return; }
+  if (a === 'up' || a === 'down') { const j = a === 'up' ? i - 1 : i + 1; if (j < 0 || j >= V.items.length) return; [V.items[i], V.items[j]] = [V.items[j], V.items[i]]; render(); draftSched(); return; }
+  if (a === 'fold') { it.fold = !it.fold; rerenderItem(i); return; }
+  if (a === 'rm') { if (!arm(t, 'Usunąć?')) return; V.items.splice(i, 1); render(); draftSched(); return; }
+  if (a === 'pick') { it.pick = it.pick === t.dataset.k || !t.dataset.k ? null : t.dataset.k; rerenderItem(i); return; }
+  if (a === 'pickm') { const f = fieldsOf(procOf(it)).get(it.pick); it.pickM = !(it.pickM != null ? it.pickM : !!(f && f.mleczne)); rerenderItem(i); return; }
+  if (a === 'tooth') { const f = fieldsOf(procOf(it)).get(t.dataset.k), n = t.dataset.t; let cur = teethOf(it.vals[f.k]);
+    if (f.t === 'tooth') { it.vals[f.k] = cur[0] === n ? '' : n; it.pick = null; } else { cur = cur.includes(n) ? cur.filter(x => x !== n) : cur.concat([n]); it.vals[f.k] = cur.join(', '); }
+    rerenderItem(i); refreshSide(); draftSched(); return; }
+  if (a === 'rowadd' || a === 'rowdel') { const k = t.dataset.k, arr = Array.isArray(it.vals[k]) ? it.vals[k] : (it.vals[k] = []); if (a === 'rowadd') arr.push({}); else arr.splice(+t.dataset.r, 1); rerenderItem(i); refreshSide(); draftSched(); return; }
+  if (a === 'copy') { const txt = curText(), ok = await copyText(txt), n = countMiss(txt); toast(ok ? 'Skopiowano opis' + (n ? ' – ' + n + ' ' + plural(n, 'pole', 'pola', 'pól') + ' do uzupełnienia' : '') : 'Nie udało się skopiować – zaznacz tekst ręcznie.'); return; }
+  if (a === 'save') { await saveVisit(); return; }
+  if (a === 'edit') { V.edited = true; V.txt = visitText(); V.genAtEdit = V.txt; refreshSide(); const ta = $('#txt_ed'); if (ta) ta.focus(); draftSched(); return; }
+  if (a === 'regen') { if (V.txt !== V.genAtEdit && !arm(t, 'Ręczne zmiany znikną – kliknij ponownie')) return; V.edited = false; V.txt = null; V.genAtEdit = null; refreshSide(); draftSched(); return; }
+  if (a === 'new') { if (dirty() && !arm(t, 'Niezapisane zmiany – kliknij ponownie')) return; V = newVisit(); S.gabAuto = await G.dayClinic(V.date, new Date().toTimeString().slice(0, 5)).catch(() => '') || ''; render(); draftSaveNow(); window.scrollTo(0, 0); return; }
+  const id = t.dataset.id, m = id && S.visits.get(id);
+  if (a === 'hmore') { S.hist.lim += 40; render(); return; }
+  if (!m) return;
+  if (a === 'hshow') { S.hist.open[id] = !S.hist.open[id]; render(); if (S.hist.open[id] && !S.bodies.has(id)) { await bodyOf(id); render(); } return; }
+  if (a === 'hcopy') { const b = await bodyOf(id); const ok = b && await copyText(b.txt); toast(ok ? 'Skopiowano opis: ' + whoOf(m) : 'Nie udało się skopiować.'); return; }
+  if (a === 'hopen' || a === 'huse') { if (dirty() && V.id !== id && !arm(t, 'Bieżąca wizyta niezapisana – kliknij ponownie')) return; if (a === 'hopen') await bodyOf(id); loadVisit(m, a === 'huse'); return; }
+  if (a === 'hdel') { if (!arm(t, 'Usunąć? Kliknij ponownie')) return; await delVisit(id); return; }
+});
+
+/* ---------- start ---------- */
+async function init() {
+  await G.ready('prywatne');
+  uiLoad(); datalists();
+  const [vs, cen, ust, cls] = await Promise.all([G.store('wizyty').all().catch(() => []), G.store('kv').get('pryw:cennik').catch(() => null), G.store('kv').get('pryw:ust').catch(() => null), G.clinics(true).catch(() => [])]);
+  vs.forEach(([k, m]) => { if (m && m.id === k && validDate(m.date) && Array.isArray(m.items)) S.visits.set(k, m); });
+  if (cen && cen.gab && typeof cen.gab === 'object') S.cennik = cen;
+  if (ust && typeof ust === 'object') S.ust = Object.assign(S.ust, ust);
+  S.clinics = cls;
+  S.gabAuto = await G.dayClinic(V.date, new Date().toTimeString().slice(0, 5)).catch(() => '') || '';
+  await autoPurge();
+  S.ready = true;
+  if (await draftRestore().catch(() => false)) { if (V.gab === 'auto' || V.date !== G.today()) S.gabAuto = await G.dayClinic(V.date, V.date === G.today() ? new Date().toTimeString().slice(0, 5) : '').catch(() => '') || ''; }
+  render(); sumsPublish();
+  G.onLock(() => draftSaveNow());
+  window.addEventListener('pagehide', () => { draftSaveNow(); });
+}
+init().catch(e => { $('#main').innerHTML = '<div class="g-err">Nie udało się uruchomić modułu: ' + esc(e && e.message || e) + '</div>'; });
+</script>
+</body>
+</html>

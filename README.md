@@ -7,7 +7,7 @@ Jedna aplikacja w przeglądarce dla lekarza dentysty, złożona z trzech moduł�
 | Strona główna | `index.html` | logowanie, trzy kafelki modułów, okno **Zarobki – wszystkie gabinety**, konto i bezpieczeństwo |
 | Kalendarz | `kalendarz.html` | dyżury w kilku gabinetach, rozliczenia, przychód netto, ZUS i podatek (dawny „Grafik Gabinetów”) |
 | Opisy NFZ | `nfz.html` | generator opisów zabiegów NFZ z wyceną punktową, ewidencją wizyt i statystykami |
-| Opisy prywatne | `prywatne.html` | generator opisów zabiegów prywatnych z cennikiem (w przygotowaniu – etap 5) |
+| Opisy prywatne | `prywatne.html` + `prywatne-katalog.js` | generator opisów zabiegów prywatnych: 19 szablonów, cennik dla każdego gabinetu, wynagrodzenie lekarza, historia, zarobki |
 
 Pasek u góry każdej strony przełącza moduły bez wracania na stronę główną; rozpoczęta wizyta w Opisach NFZ zostaje (szkic) i wraca po powrocie do modułu.
 
@@ -17,6 +17,15 @@ Pasek u góry każdej strony przełącza moduły bez wracania na stronę główn
 - **Blokada po bezczynności** (domyślnie 15 min, do zmiany w „Konto i bezpieczeństwo”), przycisk „Zablokuj” i „Zmień użytkownika” w menu użytkownika na pasku. Po ponownym zalogowaniu aplikacja wraca do modułu i niezapisanej wizyty.
 - „Konto i bezpieczeństwo”: zmiana hasła, nowy kod odzyskiwania, usunięcie konta ze wszystkimi jego danymi.
 - Przy pierwszym założeniu konta dane z poprzednich wersji (Generator opisów NFZ, Grafik Gabinetów – jeśli były otwierane w tej przeglądarce pod tym adresem) przenoszą się do konta i szyfrują; jawne kopie są usuwane dopiero po sprawdzeniu, że zaszyfrowane dane dają się odczytać.
+
+## Opisy prywatne – jak działa
+- **Wizyta**: data, gabinet (domyślnie z dyżuru w Kalendarzu), inicjały (opcjonalnie) → dodajesz dowolną liczbę procedur (wyszukiwarka i kategorie) → każda ma swój formularz (ząb FDI z diagramem, rozpoznanie z podpowiedziami ICD-10, znieczulenie, przebieg, materiały, powikłania, zalecenia, plan) → po prawej na bieżąco **opis wizyty** oraz wartość zabiegów i wynagrodzenie lekarza. „Kopiuj opis”, „Edytuj tekst” (ręczne zmiany nie są nadpisywane przez formularz), „Zapisz wizytę”, „Nowa wizyta”. Zwolnienie e-ZLA – opcjonalnie.
+- **Bez czynności dopisanych samoczynnie**: do opisu trafia tylko to, co zaznaczysz lub wpiszesz. Domyślnie zaznaczona jest wyłącznie istota zabiegu (np. „opracowanie ubytku”); „bez powikłań”, zgoda, zalecenia i znieczulenie są puste. Brakujące wymagane pola zostają jako `[UZUPEŁNIJ: …]`.
+- **Katalog (19 procedur)**: zachowawcze (ząb stały, mleczny, opracowanie + kompozyt), endodoncja (jedno- i wielokorzeniowy – długość robocza i opracowanie dla każdego kanału), ortodoncja (aparat ruchomy, stały, retencja, szyna bierna, szyna aktywna), chirurgia (ekstrakcja, ząb zatrzymany, ząb mleczny), higienizacja (skaling, piaskowanie, kompleksowa), diagnostyka (badanie, kontrola, konsultacja). Kody ICD-10 w podpowiedziach są wg WHO – sprawdź je ze słownikiem systemu gabinetu.
+- **Cennik** – osobny dla każdego gabinetu: cena procedury i wynagrodzenie lekarza – domyślny % gabinetu, własny % albo stała kwota. Przy wizycie cenę, %, kwotę i ilość można zmienić; **koszty** (np. laboratorium, implant) odejmują się przed liczeniem %. Kwoty w groszach, połówki grosza w górę.
+- **Historia**: wyszukiwanie (inicjały, procedura, treść opisu), filtr gabinetu i rodzaju zabiegu, „Kopiuj opis”, „Pokaż opis”, „Otwórz i popraw”, „Użyj jako szablonu” (nowa wizyta z tymi samymi polami i aktualnymi cenami), „Usuń”. Zapisana wizyta ma tekst i kwoty z chwili zapisu – późniejsze zmiany cennika jej nie zmieniają.
+- **Zarobki**: dziś, tydzień, miesiąc, poprzedni miesiąc, rok, wszystko albo od–do; filtr gabinetu i rodzaju zabiegu; wynagrodzenie, wartość, wizyty, procedury, średnio na wizytę, koszty; tabele gabinetów, rodzajów zabiegu i okresów (dni, tygodnie, miesiące). Sumy trafiają też do okna „Zarobki – wszystkie gabinety” na stronie głównej (NFZ i prywatne w osobnych kolumnach).
+- **Ustawienia**: podpis pod opisem (opcjonalnie) i automatyczne usuwanie treści opisów starszych niż 30 / 90 / 180 / 365 dni (kwoty zostają).
 
 ## Opisy NFZ – jak działa
 **Wiek pacjenta i kody zabiegów → pytania i diagram zębów (zęby, ćwiartki, powierzchnie) → gotowy opis** z przyciskiem „Kopiuj cały opis”. Niewypełnione miejsca zostają jako `[UZUPEŁNIJ: …]`. Każda wizyta może zapisać się w ewidencji (z inicjałami albo anonimowo) – z punktami, kwotami, czasem i gabinetem (domyślnie z dyżuru w Kalendarzu) – a zakładka **Statystyki** liczy z tego zarobki dzienne, tygodniowe i miesięczne.
@@ -61,6 +70,8 @@ Zakres dat: gotowe przyciski (dziś, tydzień, miesiąc, poprzedni miesiąc, 12 
 | `nfz.html` | Opisy NFZ: wygląd, pytania, diagram i zdania z polami do uzupełnienia (obiekt `D`), wycena `PTS`, ewidencja |
 | `szablony.js` | stałe fragmenty tekstu z pliku gabinetu (badanie, zalecenia, instruktaż wg wieku itd.) |
 | `kalendarz.html` | Kalendarz (dyżury, rozliczenia, podatki) |
+| `prywatne.html` | Opisy prywatne: wizyta, silnik szablonów, cennik, historia, zarobki |
+| `prywatne-katalog.js` | domyślny katalog 19 procedur prywatnych: pola formularzy i szablony tekstu |
 | `POLACZENIE.md` | analiza, przepisy o dokumentacji i projekt połączenia aplikacji |
 | `POSTEP.md` | co zrobione, co w toku, co dalej – do wznawiania pracy po przerwie |
 | `CLAUDE.md` | zasady pracy w repo (gałęzie, etapy, test przed commitem) |

@@ -217,3 +217,19 @@ Przy zakładaniu **pierwszego** użytkownika aplikacja wykrywa stare dane (Index
 | 5 | moduł prywatny z katalogiem 19 procedur, cenniki, wizyta, historia, zarobki | wyliczenia (Decimal), łączenie procedur, cenniki per gabinet, sumy dzienne |
 | 6 | edytor szablonów (NFZ i prywatne), wersje, zestawy, ulubione, szybka wizyta | szablon zmieniony ≠ zmiana zapisanej wizyty; przywracanie wersji; zestawy |
 | 7 | podpowiedź obrotu, okno Zarobki, eksport CSV / wydruk, kopia całości, testy całości, wygląd komputer / tablet, raport, scalenie | pełny zestaw |
+
+---
+
+## ETAP 5 – Opisy prywatne: decyzje przy wdrożeniu
+
+| Kwestia | Rozstrzygnięcie | Dlaczego |
+|---|---|---|
+| Czynności w opisie | pola wielokrotnego wyboru; domyślnie zaznaczona tylko istota zabiegu (np. „opracowanie ubytku”, „usunięcie zęba”, „piaskowanie”) | wniosek 4 z etapu 2 – brak czynności dopisanych samoczynnie |
+| „Bez powikłań”, zgoda, zalecenia, znieczulenie | zawsze puste na starcie | j.w.; zgoda pisemna (art. 34 u.z.l.) – decyzja lekarza |
+| Pola zależne | np. środek i dawka znieczulenia widoczne dopiero po wyborze rodzaju (nie przy „nie stosowano”); szwy – po zaznaczeniu „szycie”; pole ukryte nie trafia do opisu | opis nie może zawierać danych z pól, których nie widać |
+| Kody ICD-10 | tylko jako podpowiedzi w polu „Rozpoznanie” (pole tekstowe), wg WHO; do sprawdzenia ze słownikiem systemu gabinetu | rozpoznanie stawia lekarz; polskie wydanie i słowniki systemów mogą się różnić |
+| Szyna bierna / aktywna | rodzaj szyny wpisywany (podpowiedzi: relaksacyjna, ochronna, stabilizacyjna / nakładki, repozycyjna) | w specyfikacji nie doprecyzowano – do potwierdzenia |
+| Wynagrodzenie | % od (cena × ilość − koszty) albo stała kwota × ilość; koszty > wartość → 0; połówki grosza w górę | model rozliczenia Patryka (% obrotu po odjęciu kosztów laboratorium i implantów) |
+| Cennik | osobny dla każdego gabinetu + „bez gabinetu”; procedura bez ceny – ostrzeżenie, nie zero „po cichu” | decyzja Patryka: „każdy ma swój cennik” |
+| Zapisana wizyta | przechowuje tekst, pola, ceny i nazwy procedur z chwili zapisu | zmiana cennika lub szablonu nie zmienia historii |
+| Treść opisów | opcjonalne automatyczne usuwanie po 30–365 dniach (kwoty zostają) | RODO – minimalizacja, wniosek 9–10 z etapu 2 |
