@@ -8,6 +8,23 @@ Plik do wznawiania pracy po przerwie (np. po wyczerpaniu limitu). Aktualizowany 
 - Kopia aplikacji w Claude (artefakt) – ta sama wersja (wersja artefaktu `1794818108-906e`).
 - Pliki: `index.html` (UI, logika, wycena `PTS`, zapis wizyt), `szablony.js` (stałe teksty `SEG`), `testy/` (testy w przeglądarce).
 
+## Zadanie w toku: połączenie aplikacji – Kalendarz + Opisy NFZ + Opisy prywatne (gałąź `polaczenie`)
+
+Specyfikacja: prompt „Rozbudowa i połączenie aplikacji gabinetu stomatologicznego” (16.11.2026). Szczegóły, decyzje Patryka i projekt: `POLACZENIE.md`.
+Druga aplikacja (Grafik Gabinetów) pochodzi z repo `86d8n52d6y-netizen/grafik-gabinetow`, commit `cb9df0c`.
+
+| Etap | Stan | Commit |
+|---|---|---|
+| 1. Analiza obu aplikacji | ✅ zrobione | ten commit |
+| 2. Przepisy o dokumentacji medycznej | – | |
+| 3. Projekt struktury i danych | – | |
+| 4. Szkielet, użytkownicy i szyfrowanie, oba moduły w nowej strukturze | – | |
+| 5. Moduł Opisy prywatne | – | |
+| 6. Edycja szablonów, zestawy, ulubione, szybka wizyta | – | |
+| 7. Połączenia modułów, eksport, testy całości, raport, scalenie | – | |
+
+Jak wznowić: przeczytaj tę tabelę i `POLACZENIE.md`, potem `git log --oneline -10` na gałęzi `polaczenie`.
+
 ## Zadanie: ewidencja wizyt, punktów, czasu pracy i zarobków (zakończone 16.11.2026)
 
 | Etap | Stan | Commit |
@@ -231,3 +248,4 @@ Ograniczenie testów: automatyczne testy działają w Chrome. Silnika Safari (We
 | 2026-11-16 | `porzadek-pracy` | ETAP 5: ciągła oś wykresów tygodniowego i miesięcznego, kolejność kolumn tabel, przyklejona kolumna i cień przewijania; testy: 264 sprawdzenia, wszystkie OK |
 | 2026-11-16 | `porzadek-pracy` | ETAP 6: raport końcowy (zmiany, błędy, testy, ograniczenia, założenia, propozycje) |
 | 2026-11-16 | `main` | Scalenie `porzadek-pracy` → `main` (fast-forward do `5767cd5`) po 264 sprawdzeniach bez błędów; strona na żywo sprawdzona w przeglądarce; artefakt w Claude zaktualizowany |
+| 2026-11-16 | `polaczenie` | Połączenie aplikacji – ETAP 1: analiza obu aplikacji, co zachować / połączyć / poprawić, 12 problemów integracji z rozwiązaniami (`POLACZENIE.md`) |
