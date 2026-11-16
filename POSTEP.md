@@ -15,9 +15,9 @@ Druga aplikacja (Grafik Gabinetów) pochodzi z repo `86d8n52d6y-netizen/grafik-g
 
 | Etap | Stan | Commit |
 |---|---|---|
-| 1. Analiza obu aplikacji | ✅ zrobione | ten commit |
-| 2. Przepisy o dokumentacji medycznej | – | |
-| 3. Projekt struktury i danych | – | |
+| 1. Analiza obu aplikacji | ✅ zrobione | `3eeda9b` |
+| 2. Przepisy o dokumentacji medycznej | ✅ zrobione | ten commit |
+| 3. Projekt struktury i danych | ✅ zrobione | ten commit |
 | 4. Szkielet, użytkownicy i szyfrowanie, oba moduły w nowej strukturze | – | |
 | 5. Moduł Opisy prywatne | – | |
 | 6. Edycja szablonów, zestawy, ulubione, szybka wizyta | – | |
@@ -249,3 +249,4 @@ Ograniczenie testów: automatyczne testy działają w Chrome. Silnika Safari (We
 | 2026-11-16 | `porzadek-pracy` | ETAP 6: raport końcowy (zmiany, błędy, testy, ograniczenia, założenia, propozycje) |
 | 2026-11-16 | `main` | Scalenie `porzadek-pracy` → `main` (fast-forward do `5767cd5`) po 264 sprawdzeniach bez błędów; strona na żywo sprawdzona w przeglądarce; artefakt w Claude zaktualizowany |
 | 2026-11-16 | `polaczenie` | Połączenie aplikacji – ETAP 1: analiza obu aplikacji, co zachować / połączyć / poprawić, 12 problemów integracji z rozwiązaniami (`POLACZENIE.md`) |
+| 2026-11-16 | `polaczenie` | ETAP 2: przepisy (ustawa o prawach pacjenta, rozporządzenie o dokumentacji – t.j. Dz.U. 2026 poz. 1391, art. 34 u.z.l., NFZ, ZUS, RODO) i 10 wniosków dla szablonów; ETAP 3: projekt plików, sejfu, danych, połączeń i modułu prywatnego |
