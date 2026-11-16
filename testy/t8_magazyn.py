@@ -1,18 +1,20 @@
 # T8 – magazyn danych: awarie i sytuacje nietypowe (brak IndexedDB, zablokowana pamięć, błąd zapisu, dwie karty)
+#      Od połączenia aplikacji konto i sesja wymagają bazy przeglądarki; awarie bazy Opisów NFZ symulowane są tylko dla „opisyNFZ@…”.
 import sys,os; sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 from h import *
 NO_IDB="Object.defineProperty(window,'indexedDB',{get(){return undefined;},configurable:true});"
-HANG_IDB="(()=>{const real=window.indexedDB;Object.defineProperty(window,'indexedDB',{get(){return {open(){return {};},};},configurable:true});})();"
-NO_LS="(()=>{const S=Storage.prototype;S.setItem=function(){throw new DOMException('QuotaExceededError');};S.getItem=function(){return null;};})();"
+NFZ_NO_IDB="(()=>{const o=IDBFactory.prototype.open;IDBFactory.prototype.open=function(n,...a){if(String(n).startsWith('opisyNFZ@'))throw new DOMException('zablokowane','UnknownError');return o.call(this,n,...a);};})();"
+NFZ_HANG_IDB="(()=>{const o=IDBFactory.prototype.open;IDBFactory.prototype.open=function(n,...a){if(String(n).startsWith('opisyNFZ@'))return {};return o.call(this,n,...a);};})();"
+NO_LS_W="(()=>{Storage.prototype.setItem=function(){throw new DOMException('QuotaExceededError');};})();"
 def quick(pg,pts,n):
     pg.click('#steps button[data-n="4"]'); pg.fill('#f_q_pts',str(pts)); pg.press('#f_q_pts','Enter'); pg.wait_for_function(f"dbList().length==={n}&&!ui.busy",timeout=6000)
-def lskeys(pg): return pg.evaluate("(()=>{const o=[];for(let i=0;i<localStorage.length;i++)o.push(localStorage.key(i));return o.sort();})()")
+def lskeys(pg): return pg.evaluate("(()=>{const o=[];for(let i=0;i<localStorage.length;i++)o.push(localStorage.key(i));return o.filter(k=>k.startsWith('opisyNFZ')).sort();})()")
 with sync_playwright() as p:
     b=launch(p); t=T(); errs=[]
     # ---------- 1. IndexedDB niedostępne → zapis awaryjny w localStorage → powrót do IndexedDB ----------
-    ctx=b.new_context(viewport={'width':1100,'height':900}); ctx.add_init_script(NO_IDB)
-    pg=open_page(ctx,errs=errs)
-    t.chk('bez IndexedDB aplikacja startuje w trybie zapasowym (localStorage)', pg.evaluate("DB.kind")=='ls')
+    ctx=b.new_context(viewport={'width':1100,'height':900}); ctx.add_init_script(NFZ_NO_IDB)
+    pg=open_page(ctx,errs=errs); uid=pg.evaluate("G.user.id")
+    t.chk('bez bazy Opisów NFZ moduł startuje w trybie zapasowym (localStorage)', pg.evaluate("DB.kind")=='ls')
     quick(pg,100,1); quick(pg,50,2)
     pg.click('button[data-act="automode"]') if pg.locator('button[data-act="automode"]').count() else None
     pg.click('#steps button[data-n="1"]'); pg.evaluate("()=>{if(!cfg.auto){cfg.auto=true;cfgSave();}}")
@@ -23,20 +25,26 @@ with sync_playwright() as p:
     t.chk('tryb zapasowy: 3 wpisy zapisane (w tym wizyta z opisem), widoczne ostrzeżenie', len(v)==3 and len(txt)>500 and 'pamięci zapasowej' in clean(pg.inner_text('#main')), len(v))
     pg.close(); pg=open_page(ctx,errs=errs)
     t.chk('tryb zapasowy: po ponownym uruchomieniu wpisy są na miejscu', len(visits(pg))==3 and pg.evaluate("DB.kind")=='ls')
-    k_ls=[k for k in lskeys(pg) if k!='opisyNFZ.cfg']
+    k_ls=[k for k in lskeys(pg) if not k.endswith('.cfg')]
+    vals=pg.evaluate("(ks)=>ks.map(k=>localStorage.getItem(k))",k_ls)
+    t.chk('pamięć zapasowa też jest zaszyfrowana (same szyfrogramy, bez kodów i tekstu opisu)', len(vals)>=4 and all('v1:' in v and 'ST33' not in v and 'BADANIE' not in v for v in vals) and all(k.startswith('opisyNFZ2@'+uid+'.') for k in k_ls), k_ls[:3])
     pg.close()
     ctx2=b.new_context(viewport={'width':1100,'height':900},storage_state=ctx.storage_state())     # ta sama pamięć localStorage, IndexedDB znów działa
     pg=open_page(ctx2,errs=errs); v2=visits(pg)
     t.chk('gdy IndexedDB wraca: wpisy z pamięci zapasowej przenoszą się do głównej bazy (3 wpisy, ten sam opis), pamięć zapasowa opróżniona',
-          pg.evaluate("DB.kind")=='idb' and sorted(x['id'] for x in v2)==sorted(x['id'] for x in v) and pg.evaluate("async (id)=>bodyText(await dbBody(id))",gen['id'])==txt and len(k_ls)>0 and lskeys(pg)==['opisyNFZ.cfg'], (len(k_ls),lskeys(pg)))
+          pg.evaluate("DB.kind")=='idb' and sorted(x['id'] for x in v2)==sorted(x['id'] for x in v) and pg.evaluate("async (id)=>bodyText(await dbBody(id))",gen['id'])==txt and len(k_ls)>0 and lskeys(pg)==['opisyNFZ@'+uid+'.cfg'], (len(k_ls),lskeys(pg)))
     pg.close(); pg=open_page(ctx2,errs=errs)
     t.chk('…i nie dublują się przy kolejnym uruchomieniu', len(visits(pg))==3)
     # ---------- 2. IndexedDB „wisi” (nie odpowiada) → po 4 s tryb zapasowy ----------
-    ctx3=b.new_context(); ctx3.add_init_script(HANG_IDB); pg3=ctx3.new_page(); pg3.goto(BASE)
+    ctx3=b.new_context(); ctx3.add_init_script(NFZ_HANG_IDB); pg3=open_page(ctx3,wait=False)
     pg3.wait_for_function("typeof DB!=='undefined'&&DB.ready===true",timeout=9000)
     t.chk('nieodpowiadające IndexedDB nie blokuje aplikacji: po limicie czasu tryb zapasowy', pg3.evaluate("DB.kind")=='ls')
-    # ---------- 3. żadna pamięć nie działa → praca tymczasowa z wyraźnym ostrzeżeniem ----------
-    ctx4=b.new_context(viewport={'width':1100,'height':900}); ctx4.add_init_script(NO_IDB+NO_LS); e4=[]; pg4=open_page(ctx4,errs=e4)
+    # ---------- 3a. przeglądarka bez bazy danych → aplikacja nie zakłada konta, tylko wyjaśnia problem ----------
+    ctx4a=b.new_context(); ctx4a.add_init_script(NO_IDB); e4a=[]; pa=ctx4a.new_page(); pa.on('pageerror',lambda e: e4a.append(str(e))); pa.goto(BASE)
+    pa.wait_for_url('**/index.html**'); pa.wait_for_selector('.g-err')
+    t.chk('przeglądarka bez bazy danych: zamiast modułu – komunikat na stronie głównej, bez błędów JS', 'nie pozwala bezpiecznie zapisywać danych' in pa.inner_text('#app') and pa.locator('#f-setup').count()==0 and not e4a, e4a)
+    # ---------- 3b. zablokowana baza NFZ i pełna pamięć zapasowa → praca tymczasowa z wyraźnym ostrzeżeniem ----------
+    ctx4=b.new_context(viewport={'width':1100,'height':900}); login(ctx4); ctx4.add_init_script(NFZ_NO_IDB+NO_LS_W); e4=[]; pg4=open_page(ctx4,errs=e4)
     quick(pg4,100,1)
     warn=clean(pg4.inner_text('#main'))
     t.chk('zablokowana cała pamięć przeglądarki: aplikacja działa, wpis jest w pamięci karty, czerwone ostrzeżenie o braku trwałego zapisu', pg4.evaluate("DB.kind")=='mem' and len(visits(pg4))==1 and 'nie da się zapisywać danych na stałe' in warn and not e4, e4)

@@ -44,7 +44,7 @@ with sync_playwright() as p:
     nos=sorted((x['date'],x['no'],x['ini']) for x in v)
     t.chk('numery wpisów nadane kolejno wg daty (1–4), bez powtórzeń', sorted(x['no'] for x in v)==[1,2,3,4] and [n[1] for n in nos]==sorted(n[1] for n in nos), nos)
     keys1=pg.evaluate(LSKEYS)
-    t.chk('stare klucze usunięte z localStorage dopiero po sprawdzeniu przeniesienia; zostają tylko ustawienia', keys1==['opisyNFZ.cfg'], keys1)
+    t.chk('stare klucze usunięte z localStorage dopiero po sprawdzeniu przeniesienia; zostają tylko ustawienia', [k for k in keys1 if k.startswith('opisyNFZ')]==['opisyNFZ@'+pg.evaluate("G.user.id")+'.cfg'] and all(k.startswith('gabinet.') or k.startswith('opisyNFZ@') for k in keys1), keys1)
     # widok
     pg.click('#steps button[data-n="4"]')
     cards=clean(pg.inner_text('#hist-list'))

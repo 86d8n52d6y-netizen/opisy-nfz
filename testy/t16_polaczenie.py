@@ -1,0 +1,70 @@
+# T16 – etap 7: podpowiedź w dyżurze (sumy z Opisów NFZ i prywatnych → „Wpisz jako obrót”), eksport CSV i druk w Opisach
+#       prywatnych, „kopia całości” (zaszyfrowana hasłem, wczytanie na innym urządzeniu/koncie, scalanie bez dubli)
+import sys,os; sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
+from h import *
+import datetime, re, json
+TODAY=datetime.date.today().isoformat()
+def ready(pg): pg.wait_for_function("typeof S!=='undefined'&&S.ready===true",timeout=15000)
+def kal(pg): pg.goto(KAL); pg.wait_for_function("window.Kal&&Kal.UI.loaded===true",timeout=15000)
+with sync_playwright() as p:
+    b=launch(p); t=T(); errs=[]
+    ctx=b.new_context(viewport={'width':1300,'height':950},accept_downloads=True); login(ctx,pwd='haslo-test-1')
+    pg=ctx.new_page(); pg.on('pageerror',lambda e: errs.append(str(e)))
+    kal(pg)
+    A,sid=pg.evaluate("(d)=>{const K=Kal,s=K.S();s.clinics[0].name='Gabinet A';s.clinics[0].active=true;K.saveSettings();const id=K.uid();K.M(d.slice(0,7),true).shifts.push({id,date:d,clinicId:s.clinics[0].id,start:'00:00',end:'23:59',status:'planned'});K.saveMonth(d.slice(0,7));return [s.clinics[0].id,id];}",TODAY)
+    pg.wait_for_function("Kal.Store.sync==='saved'",timeout=8000)
+    pg.evaluate(f"()=>{{Kal.openEditor('{sid}');Kal.render();}}"); pg.wait_for_timeout(200)
+    t.chk('dyżur bez opisów tego dnia: brak podpowiedzi', pg.locator('#sumHint').count()==0 and pg.locator('#f-turnover').count()==1)
+    # wizyta NFZ i prywatna dziś w Gabinecie A
+    pg.goto(BASE); pg.wait_for_function("typeof DB!=='undefined'&&DB.ready===true")
+    pg.fill('#i_sv_ini','jk'); pg.fill('#i_sh_age','9'); pg.click('button.plan-btn[data-p="o5"][data-w="I"]'); pg.click('#bar button.btn:not(.ghost)')
+    pg.click('#card-ST30 button[data-act="quadset"][data-q="1,2"]'); pg.click('#bar button.btn:not(.ghost)'); idle(pg); pg.wait_for_timeout(500)
+    nk=pg.evaluate("(()=>{const m=[...DB.visits.values()][0],k=calc(m);return {gab:m.gab,v:k.pc+k.rv+k.ex};})()")
+    pg.click('#gbar a[data-gmod="prywatne"]'); pg.wait_for_url('**/prywatne.html'); ready(pg)   # przejście paskiem – sumy NFZ zapisują się od razu
+    pg.evaluate(f"async ()=>{{V=newVisit();V.gab='{A}';const it=newItem('zach-kompozyt');it.vals.zab='36';it.vals.rozp='próchnica';it.vals.mat='kompozyt';it.c=50000;it.p=40;it.cost=8000;it.man=true;V.items=[it];V.ini='AB';await saveVisit();}}")
+    pg.click('#gbar a[data-gmod="kalendarz"]'); pg.wait_for_url('**/kalendarz.html'); pg.wait_for_function("window.Kal&&Kal.UI.loaded===true",timeout=15000); pg.evaluate(f"()=>{{Kal.openEditor('{sid}');Kal.render();}}"); pg.wait_for_timeout(200)
+    hint=clean(pg.inner_text('#sumHint')).replace('\n',' ')
+    tot=nk['v']+50000
+    fz=lambda c:(f"{c//100:,}".replace(',',' ') if c>=1000000 else str(c//100))+','+f"{c%100:02d}"+' zł'
+    t.chk('podpowiedź w dyżurze: NFZ (1 wizyta, wartość) i prywatne (1 wizyta, 500 zł, koszty 80 zł)', nk['gab']==A and '1 wizyta · wartość '+fz(nk['v']) in hint and 'Opisy prywatne: 1 wizyta · wartość 500,00 zł · koszty 80,00 zł' in hint, hint)
+    pg.click('#sumHint button[data-v="all"]'); pg.wait_for_timeout(200)
+    tv=pg.input_value('#f-turnover'); lv=pg.input_value('#f-lab')
+    t.chk('„Wpisz jako obrót”: obrót = NFZ + prywatne, lab = koszty, status „wykonany”', tv==f"{tot/100:.2f}".rstrip('0').rstrip('.').replace('.',',') and lv=='80' and pg.evaluate("Kal.UI.edit.draft.status")=='done', (tv,lv,tot))
+    pg.click('#sumHint button[data-v="nfz"]'); pg.wait_for_timeout(150)
+    t.chk('„tylko NFZ” podmienia obrót, lab zostaje', pg.input_value('#f-turnover')==f"{nk['v']/100:.2f}".rstrip('0').rstrip('.').replace('.',',') and pg.input_value('#f-lab')=='80')
+    # CSV i druk
+    pg.goto(PRYW); ready(pg); pg.click('#tabs button[data-tab="zar"]'); pg.click('button[data-zr="today"]')
+    with pg.expect_download() as dl: pg.click('#z_csv')
+    csv=open(dl.value.path(),encoding='utf-8-sig').read().splitlines()
+    t.chk('CSV: nagłówek i wiersz wizyty (średnik, przecinek dziesiętny, polskie znaki)', csv[0].startswith('Data;Gabinet;Pacjent;Procedury') and csv[1]==f'{TODAY};Gabinet A;AB;Opracowanie ubytku + odbudowa kompozytowa;1;500,00;80,00;168,00', csv[:2])
+    t.chk('przycisk „Drukuj / zapisz PDF”; w druku bez paska i przycisków', pg.locator('button[data-a="zprint"]').count()==1 and pg.evaluate("[...document.styleSheets].some(s=>{try{return [...s.cssRules].some(r=>r.media&&r.media.mediaText==='print'&&r.cssText.includes('.gbar'))}catch(e){return false}})"))
+    # kopia całości
+    pg.goto(HOME+'#konto'); pg.wait_for_selector('#f-bk',state='attached'); pg.click('details:has(#f-bk) summary')
+    pg.fill('#o4','zle-haslo'); pg.click('#f-bk button[type=submit]'); pg.wait_for_selector('#bk-msg .g-err',timeout=20000)
+    t.chk('kopia całości: złe hasło konta → komunikat, bez pliku', 'Nieprawidłowe hasło' in pg.inner_text('#bk-msg'))
+    pg.fill('#o4','haslo-test-1')
+    with pg.expect_download(timeout=30000) as dl: pg.click('#f-bk button[type=submit]')
+    bk=open(dl.value.path(),encoding='utf-8').read(); bf=json.loads(bk)
+    t.chk('plik kopii: zaszyfrowany (bez inicjałów, nazw gabinetów i tekstów opisów)', bf['app']=='gabinet-kopia' and bf['kdf']['iter']>=600000 and not re.search(r'Gabinet A|próchnica|"AB"|"JK"|ST30',bk) and 'Opisy prywatne: 1, Opisy NFZ: 1' in pg.inner_text('#bk-msg'))
+    # inne urządzenie, nowe konto z innym hasłem
+    c2=b.new_context(); login(c2,name='Patryk',pwd='inne-haslo-9'); p2=c2.new_page(); p2.on('pageerror',lambda e: errs.append(str(e)))
+    p2.goto(HOME+'#konto'); p2.wait_for_selector('#f-bi',state='attached'); p2.click('details:has(#f-bi) summary')
+    p2.set_input_files('#bkf',dl.value.path()); p2.fill('#o5','inne-haslo-9'); p2.click('#f-bi button[type=submit]'); p2.wait_for_selector('#bi-msg .g-err',timeout=20000)
+    t.chk('wczytanie z hasłem innym niż przy tworzeniu kopii → komunikat', 'Nieprawidłowe hasło do kopii' in p2.inner_text('#bi-msg'))
+    p2.set_input_files('#bkf',dl.value.path()); p2.fill('#o5','haslo-test-1'); p2.click('#f-bi button[type=submit]'); p2.wait_for_selector('#bi-msg .g-ok',timeout=30000)
+    msg=p2.inner_text('#bi-msg')
+    t.chk('wczytanie kopii na nowym koncie: wizyty prywatne, NFZ i Kalendarz', 'Opisy prywatne 1, Opisy NFZ 1' in msg, msg)
+    p2.goto(PRYW); ready(p2)
+    t.chk('Opisy prywatne po wczytaniu: wizyta AB z tekstem i cennikiem/szablonami', p2.evaluate("[...S.visits.values()].map(m=>m.ini).join()")=='AB' and p2.evaluate("G.store('opisy').get([...S.visits.keys()][0]).then(b=>b.txt.startsWith('Ząb 36'))"))
+    p2.goto(BASE); p2.wait_for_function("typeof DB!=='undefined'&&DB.ready===true")
+    v=visits(p2); bt=p2.evaluate(f"dbBody('{v[0]['id']}').then(b=>bodyText(b))") if v else ''
+    t.chk('Opisy NFZ po wczytaniu: wizyta JK z opisem', len(v)==1 and v[0]['ini']=='JK' and 'ST30' in bt)
+    kal(p2); t.chk('Kalendarz po wczytaniu: Gabinet A i dyżur', p2.evaluate("Kal.S().clinics[0].name")=='Gabinet A' and p2.evaluate(f"Kal.M('{TODAY[:7]}').shifts.length")==1)
+    p2.goto(HOME+'#konto'); p2.wait_for_selector('#f-bi',state='attached'); p2.click('details:has(#f-bi) summary')
+    p2.set_input_files('#bkf',dl.value.path()); p2.fill('#o5','haslo-test-1'); p2.click('#f-bi button[type=submit]'); p2.wait_for_selector('#bi-msg .g-ok',timeout=30000)
+    msg2=p2.inner_text('#bi-msg')
+    t.chk('ponowne wczytanie tej samej kopii nie dubluje (0 nowych, Kalendarz pominięty)', 'Opisy prywatne 0, Opisy NFZ 0' in msg2 and 'Kalendarz' in msg2, msg2)
+    p2.goto(BASE); p2.wait_for_function("typeof DB!=='undefined'&&DB.ready===true")
+    t.chk('…nadal 1 wizyta NFZ', len(visits(p2))==1)
+    t.chk('brak błędów JS', not errs, errs[:3])
+    t.done('T16 podpowiedź w dyżurze, CSV, kopia całości'); b.close()

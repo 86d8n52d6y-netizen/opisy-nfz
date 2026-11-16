@@ -8,6 +8,37 @@ Plik do wznawiania pracy po przerwie (np. po wyczerpaniu limitu). Aktualizowany 
 - Kopia aplikacji w Claude (artefakt) – ta sama wersja (wersja artefaktu `1794818108-906e`).
 - Pliki: `index.html` (UI, logika, wycena `PTS`, zapis wizyt), `szablony.js` (stałe teksty `SEG`), `testy/` (testy w przeglądarce).
 
+## Zadanie w toku: połączenie aplikacji – Kalendarz + Opisy NFZ + Opisy prywatne (gałąź `polaczenie`)
+
+Specyfikacja: prompt „Rozbudowa i połączenie aplikacji gabinetu stomatologicznego” (16.11.2026). Szczegóły, decyzje Patryka i projekt: `POLACZENIE.md`.
+Druga aplikacja (Grafik Gabinetów) pochodzi z repo `86d8n52d6y-netizen/grafik-gabinetow`, commit `cb9df0c`.
+
+| Etap | Stan | Commit |
+|---|---|---|
+| 1. Analiza obu aplikacji | ✅ zrobione | `3eeda9b` |
+| 2. Przepisy o dokumentacji medycznej | ✅ zrobione | `368161b` |
+| 3. Projekt struktury i danych | ✅ zrobione | `368161b` |
+| 4. Szkielet, użytkownicy i szyfrowanie, oba moduły w nowej strukturze | ✅ zrobione – 13 plików testów, 302 sprawdzenia, wszystkie OK | `e290020` |
+| 5. Moduł Opisy prywatne | ✅ zrobione – 14 plików testów, 351 sprawdzeń, wszystkie OK | `9258ed6` |
+| 6. Edycja szablonów, zestawy, ulubione, szybka wizyta | ✅ zrobione – 16 plików testów, 423 sprawdzenia, wszystkie OK | `99b58c9` + ten commit |
+| 7. Połączenia modułów, eksport, testy całości, raport, scalenie | – | |
+
+Jak wznowić: przeczytaj tę tabelę i `POLACZENIE.md`, potem `git log --oneline -10` na gałęzi `polaczenie`.
+
+Stan po ETAPIE 4 (co już działa na gałęzi):
+- `index.html` – zakładanie konta (hasło + kod odzyskiwania), logowanie, odzyskiwanie hasła, kafelki, okno „Zarobki – wszystkie gabinety”, konto (blokada, zmiana hasła, nowy kod, usunięcie konta).
+- `wspolne.js` – użytkownicy, szyfrowanie AES-GCM, sesja z blokadą po bezczynności, pasek modułów, magazyn `G.store`, szyfrująca warstwa `G.wrapBE`, szkice, sumy dzienne, gabinety z Kalendarza, przeniesienie danych z poprzednich wersji.
+- `nfz.html` – dawny `index.html` Opisów NFZ: ten sam mechanizm, dane szyfrowane, pole „Gabinet” przy wizycie (domyślnie z dyżuru), szkic wizyty przy przełączaniu modułów (starszy niż 12 h – pomijany), sumy dzienne dla strony głównej.
+- `kalendarz.html` – dawny Grafik Gabinetów: dane szyfrowane w `gabinet@<id>`, sumy przychodu z dyżurów dla strony głównej, uchwyt `window.Kal` dla testów.
+- Testy: nowy `t12_sejf.py` (35 sprawdzeń), T2/T6/T8 dostosowane do logowania i baz per użytkownik.
+
+Stan po ETAPIE 5:
+- `prywatne.html` + `prywatne-katalog.js` – wizyta z wieloma procedurami, silnik szablonów (`{pole}`, `{?pole}…{/pole}`, `{!pole}…{/pole}`, `[UZUPEŁNIJ]`), 19 procedur, cennik dla każdego gabinetu (domyślny % / własny % / kwota, koszty przed %), edycja tekstu, historia z wyszukiwaniem w treści, „Użyj jako szablonu”, zarobki (okresy, gabinety, rodzaje zabiegu), usuwanie treści starych opisów, szkic przy przełączaniu modułów, sumy dla strony głównej (`suma:pryw`).
+- Test `t13_prywatne.py` (49 sprawdzeń, w tym 300 przypadków wynagrodzenia z wyrocznią Decimal).
+- Założenia do potwierdzenia przez Patryka: „szyna bierna / aktywna” rozumiane szeroko (rodzaj do wpisania); „Procedury” w zarobkach liczone z ilością; domyślny % gabinetu pusty, dopóki go nie ustawi.
+
+Do zapamiętania na etap 7: stara strona Grafiku (`/grafik-gabinetow/`) leży w tej samej domenie – po przeniesieniu jej dane znikają z niej; przed scaleniem zapytać Patryka o przekierowanie starej strony; rozważyć ponowne wykrywanie danych starych wersji przy logowaniu (gdy ktoś jeszcze korzysta ze starej strony).
+
 ## Zadanie: ewidencja wizyt, punktów, czasu pracy i zarobków (zakończone 16.11.2026)
 
 | Etap | Stan | Commit |
@@ -231,3 +262,11 @@ Ograniczenie testów: automatyczne testy działają w Chrome. Silnika Safari (We
 | 2026-11-16 | `porzadek-pracy` | ETAP 5: ciągła oś wykresów tygodniowego i miesięcznego, kolejność kolumn tabel, przyklejona kolumna i cień przewijania; testy: 264 sprawdzenia, wszystkie OK |
 | 2026-11-16 | `porzadek-pracy` | ETAP 6: raport końcowy (zmiany, błędy, testy, ograniczenia, założenia, propozycje) |
 | 2026-11-16 | `main` | Scalenie `porzadek-pracy` → `main` (fast-forward do `5767cd5`) po 264 sprawdzeniach bez błędów; strona na żywo sprawdzona w przeglądarce; artefakt w Claude zaktualizowany |
+| 2026-11-16 | `polaczenie` | Połączenie aplikacji – ETAP 1: analiza obu aplikacji, co zachować / połączyć / poprawić, 12 problemów integracji z rozwiązaniami (`POLACZENIE.md`) |
+| 2026-11-16 | `polaczenie` | ETAP 2: przepisy (ustawa o prawach pacjenta, rozporządzenie o dokumentacji – t.j. Dz.U. 2026 poz. 1391, art. 34 u.z.l., NFZ, ZUS, RODO) i 10 wniosków dla szablonów; ETAP 3: projekt plików, sejfu, danych, połączeń i modułu prywatnego |
+| 2026-11-16 | `polaczenie` | ETAP 4: strona główna i konta z szyfrowaniem (`index.html`, `wspolne.js/css`), Opisy NFZ → `nfz.html`, Grafik → `kalendarz.html`, przeniesienie starych danych, pasek modułów, szkice, okno Zarobki; nowy test T12; 13 plików testów, 302 sprawdzenia, wszystkie OK |
+| 2026-11-16 | `polaczenie` | ETAP 5: moduł Opisy prywatne (`prywatne.html`, `prywatne-katalog.js`) – 19 procedur, cenniki gabinetów, wynagrodzenie, historia, zarobki, prywatność; poprawka: kliknięcie „Zapisz” tuż po wpisaniu pola nie ginie; test T13; razem 14 plików, 351 sprawdzeń, wszystkie OK |
+| 2026-11-16 | `polaczenie` | ETAP 6, cz. 1: Opisy prywatne – edytor szablonów (pola, kody, warunki, tekst, podgląd, wersje i przywracanie, własne procedury, duplikat, ukrywanie), migawka szablonu w zapisanej wizycie, ulubione, zestawy (przeciąganie, ceny wg cennika), tryb szybkiej wizyty; test T14 (42 sprawdzenia) |
+| 2026-11-16 | `polaczenie` | ETAP 6, cz. 2: Opisy NFZ – edycja gotowego tekstu przed zapisem (zapis, kopiowanie, szkic, otwarcie z historii), ulubione i ukryte kody, własne zestawy kodów (zasady NFZ bez zmian), edytor stałych tekstów z szablony.js z wersjami; poprawki wyglądu na telefonie; test T15; razem 16 plików, 423 sprawdzenia OK. Nie zrobiono: własne (nowe) procedury NFZ z ręcznymi punktami – do decyzji Patryka |
+| 2026-11-16 | `polaczenie` | ETAP 7: podpowiedź w dyżurze Kalendarza (sumy z Opisów NFZ i prywatnych → „Wpisz jako obrót”, koszty → lab), CSV i druk w Zarobkach prywatnych, kopia całości (zaszyfrowana hasłem, scalanie bez dubli), sumy dnia zapisywane od razu przy zapisie i wyjściu z modułu; test T16; razem 17 plików, 439 sprawdzeń OK |
+| 2026-11-16 | `polaczenie` | Decyzja Patryka: najpierw podgląd (artefakt Claude „Gabinet – podgląd połączonej aplikacji”, osobne dane; pobieranie plików w podglądzie nie działa), scalenie do `main` dopiero po jego teście; stara strona Grafiku zostaje bez zmian (bez przekierowania) |
