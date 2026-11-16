@@ -107,7 +107,7 @@ with sync_playwright() as p:
     raw=pg.evaluate(RAW,['gabinet@'+uid,'wizyty'])+pg.evaluate(RAW,['gabinet@'+uid,'opisy'])
     t.chk('w bazie tylko szyfrogram (wizyta i treść opisu)', len(raw)==2 and all(ENC.fullmatch(v) for _,v in raw))
     sums=pg.evaluate("G.sums.get('pryw')")
-    t.chk('suma dnia dla strony głównej: dziś, Gabinet A, 1 wizyta, 920 / 348 zł', sums.get(TODAY,{}).get(A)=={'n':1,'val':92000,'pay':34800}, sums)
+    t.chk('suma dnia dla strony głównej: dziś, Gabinet A, 1 wizyta, 920 / 348 zł', sums.get(TODAY,{}).get(A)=={'n':1,'val':92000,'pay':34800,'cost':5000}, sums)
     # ---------- edycja tekstu ----------
     pg.click('#b_edit'); orig=pg.input_value('#txt_ed'); pg.fill('#txt_ed',orig+'\nDOPISEK RĘCZNY'); pg.wait_for_timeout(100)
     pg.fill(fid(pg,0,'odcien'),'A3'); pg.wait_for_timeout(150)

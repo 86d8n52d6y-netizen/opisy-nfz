@@ -24,6 +24,11 @@ Pasek u góry każdej strony przełącza moduły bez wracania na stronę główn
 - **Stałe teksty opisów** (Ustawienia): edycja fragmentów z `szablony.js` (badanie, zalecenia, instruktaż…) jako wersje na Twoim koncie – z historią i przywróceniem tekstu domyślnego. Plik `szablony.js` się nie zmienia; zapisane wizyty zachowują swój tekst.
 - Prywatne: zakładki **Szablony** (edycja pól i tekstu, wersje, własne procedury, duplikat, ukrywanie, ★) i **Zestawy** (przeciąganie, ceny wg cennika), przycisk **⚡ Szybka wizyta** (tylko pola wymagane, „Kopiuj i zapisz”).
 
+## Połączenia między modułami
+- **Kalendarz → dyżur**: w formularzu dyżuru (gabinet rozliczany procentowo) podpowiedź „Z opisów tego dnia w tym gabinecie” – wizyty i wartość z Opisów NFZ (punkty + przeglądy + kwoty dodatkowe) i z Opisów prywatnych (z kosztami) – oraz przyciski „Wpisz jako obrót” / „tylko NFZ” / „tylko prywatne”. Koszty z Opisów prywatnych trafiają do pola „Lab / implanty”, jeśli jest puste. Nic nie wpisuje się samo.
+- **Kopia całości** (Konto i bezpieczeństwo): jeden plik ze wszystkimi modułami, zaszyfrowany hasłem konta z chwili tworzenia kopii; wczytanie na innym urządzeniu (także na nowym koncie) scala dane bez dubli. Ustawień, szablonów, zestawów i Kalendarza, które już są na koncie, nie nadpisuje.
+- **Opisy prywatne → Zarobki**: „Pobierz CSV” (Excel: średnik, przecinek dziesiętny) i „Drukuj / zapisz PDF”.
+
 ## Opisy prywatne – jak działa
 - **Wizyta**: data, gabinet (domyślnie z dyżuru w Kalendarzu), inicjały (opcjonalnie) → dodajesz dowolną liczbę procedur (wyszukiwarka i kategorie) → każda ma swój formularz (ząb FDI z diagramem, rozpoznanie z podpowiedziami ICD-10, znieczulenie, przebieg, materiały, powikłania, zalecenia, plan) → po prawej na bieżąco **opis wizyty** oraz wartość zabiegów i wynagrodzenie lekarza. „Kopiuj opis”, „Edytuj tekst” (ręczne zmiany nie są nadpisywane przez formularz), „Zapisz wizytę”, „Nowa wizyta”. Zwolnienie e-ZLA – opcjonalnie.
 - **Bez czynności dopisanych samoczynnie**: do opisu trafia tylko to, co zaznaczysz lub wpiszesz. Domyślnie zaznaczona jest wyłącznie istota zabiegu (np. „opracowanie ubytku”); „bez powikłań”, zgoda, zalecenia i znieczulenie są puste. Brakujące wymagane pola zostają jako `[UZUPEŁNIJ: …]`.

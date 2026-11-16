@@ -899,7 +899,7 @@ async function refreshGab(){                          // gabinet domyślny = gab
 function visitGab(){const v=str(state.a['sv.gab']);return v==='-'?'':(v||state.gabAuto||'');}
 function gabName(id){const c=(state.clinics||[]).find(x=>x.id===id);return c?c.name:'';}
 let sumsT=null;
-function sumsSched(){clearTimeout(sumsT);sumsT=setTimeout(sumsPublish,600);}
+function sumsSched(){clearTimeout(sumsT);sumsT=setTimeout(sumsPublish,150);}
 function sumsPublish(){                               // data → gabinet → liczba wizyt i kwoty (grosze) – dla strony głównej i Kalendarza
   if(!DB.ready)return;const map={};
   DB.visits.forEach(m=>{const k=calc(m),g=m.gab||'',d=map[m.date]||(map[m.date]={}),o=d[g]||(d[g]={n:0,pc:0,sh:0,rv:0,ex:0});
@@ -925,7 +925,7 @@ async function draftRestore(){                        // po powrocie z innego mo
   state.step=[1,2,3].includes(d.step)?d.step:1;state.back=d.back||1;
   return true;
 }
-G.onLock(()=>{if(state.step===3)autoSave();return draftSaveNow();});
+G.onLock(()=>{if(state.step===3)autoSave();clearTimeout(sumsT);return Promise.all([draftSaveNow(),sumsPublish()]);});
 document.addEventListener('input',()=>draftSched(),true);
 async function dbReload(){
   const vs=await DB.be.all('visits'),sg=await DB.be.all('segs');
@@ -2047,7 +2047,7 @@ window.addEventListener('storage',e=>{                // ustawienia zmienione w 
   if(e.key!==LSP+'cfg'||!e.newValue)return;
   try{const c=JSON.parse(e.newValue);if(!c||typeof c!=='object')return;cfgApply(cfg,c);if(DB.ready&&!ui.edit&&!document.hasFocus())render();}catch(_){}
 });
-window.addEventListener('pagehide',()=>{if(DB.ready&&state.step===3)autoSave();draftSaveNow();});
+window.addEventListener('pagehide',()=>{if(DB.ready&&state.step===3)autoSave();draftSaveNow();if(DB.ready){clearTimeout(sumsT);sumsPublish();}});
 render();
 dbInit().then(()=>{if(state.step>=3)render();else{renderSteps();renderBar();const lb=document.getElementById('link-ban');if(lb)refreshSave();}},
   e=>{DB.be=beMem();DB.kind='mem';DB.note=String(e&&e.message||e);DB.ready=true;renderSteps();});

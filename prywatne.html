@@ -127,7 +127,7 @@ textarea.pw-txted{min-height:260px;font-size:14.5px}
 .pw-empty{color:var(--g-muted);text-align:center;padding:24px}
 .pw .g-tbl td .pw-in,.pw .g-tbl td select{min-height:36px;padding:6px 8px;font-size:14px}
 .pw-cat td{background:var(--g-bg);font-weight:700;font-size:13px;color:var(--g-muted)}
-@media print{.pw-tabs,.pw-add,.pw-btns,.g-btn{display:none!important}}
+@media print{.pw-tabs,.pw-add,.pw-btns,.g-btn,.gbar,.pw-chip,.pw-st label,select{display:none!important}.pw-side{position:static;max-height:none}.g-card,.pw-tiles div{break-inside:avoid;box-shadow:none}}
 </style>
 </head>
 <body class="gp">
@@ -324,13 +324,13 @@ async function saveVisit() {
     await G.store('wizyty').put(V.id, m);
   } catch (e) { Object.assign(V, keep); toast('Nie udało się zapisać wizyty: ' + (e && e.message || e)); render(); return; }
   S.visits.set(V.id, m); S.bodies.set(V.id, { txt, edited: !!V.edited });
-  V.savedSig = sigOf(); sumsSched(); draftSaveNow(); render();
+  V.savedSig = sigOf(); clearTimeout(sT); sT = null; await sumsPublish(); draftSaveNow(); render();
   toast((isNew ? 'Zapisano wizytę: ' : 'Zapisano zmiany: ') + whoOf(m) + ' · ' + zl(m.val) + (m.miss ? ' · ' + m.miss + ' pól do uzupełnienia' : ''));
 }
 async function delVisit(id) {
   try { await G.store('wizyty').del(id); await G.store('opisy').del(id); } catch (e) { toast('Nie udało się usunąć: ' + (e && e.message || e)); return; }
   S.visits.delete(id); S.bodies.delete(id); if (V.id === id) { V.id = null; V.savedSig = null; }
-  sumsSched(); render(); toast('Usunięto wizytę.');
+  clearTimeout(sT); sT = null; await sumsPublish(); render(); toast('Usunięto wizytę.');
 }
 async function bodyOf(id) {
   if (S.bodies.has(id)) return S.bodies.get(id);
@@ -338,10 +338,10 @@ async function bodyOf(id) {
   if (b) S.bodies.set(id, b); return b;
 }
 let sT = null;
-function sumsSched() { clearTimeout(sT); sT = setTimeout(sumsPublish, 300); }
-function sumsPublish() {                                           // data → gabinet → {n, val, pay} dla strony głównej
+function sumsSched() { clearTimeout(sT); sT = setTimeout(() => { sT = null; sumsPublish(); }, 300); }
+function sumsPublish() {                                           // data → gabinet → {n, val, pay, cost} dla strony głównej i Kalendarza
   const map = {};
-  S.visits.forEach(m => { const d = map[m.date] || (map[m.date] = {}), g = d[m.gab || ''] || (d[m.gab || ''] = { n: 0, val: 0, pay: 0 }); g.n++; g.val += m.val || 0; g.pay += m.pay || 0; });
+  S.visits.forEach(m => { const d = map[m.date] || (map[m.date] = {}), g = d[m.gab || ''] || (d[m.gab || ''] = { n: 0, val: 0, pay: 0, cost: 0 }); g.n++; g.val += m.val || 0; g.pay += m.pay || 0; g.cost += m.cost || 0; });
   return G.sums.put('pryw', map).catch(() => { });
 }
 let cT = null;
@@ -574,6 +574,7 @@ function htmlZar() {
     '<div class="pw-hrow" style="margin-top:10px"><label class="pw-l">Gabinet<select id="z_gab"><option value="*">wszystkie</option>' + S.clinics.map(c => '<option value="' + esc(c.id) + '"' + (z.gab === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '<option value="-"' + (z.gab === '-' ? ' selected' : '') + '>bez gabinetu</option></select></label>' +
     '<label class="pw-l">Rodzaj zabiegu<select id="z_kat"><option value="">wszystkie</option>' + KAT.kat.map(k => '<option value="' + k.id + '"' + (z.kat === k.id ? ' selected' : '') + '>' + esc(k.name) + '</option>').join('') + '</select></label></div>' +
     '<p class="pw-st">' + (z.r === 'all' ? 'cała historia' : fmtD(a) + ' – ' + fmtD(b)) + '</p></section>';
+  out += '<div class="pw-btns" style="margin:0 0 4px"><button type="button" class="g-btn ghost sm" data-a="zcsv" id="z_csv"' + (rows.length ? '' : ' disabled') + '>Pobierz CSV (wizyty z okresu)</button><button type="button" class="g-btn ghost sm" data-a="zprint">Drukuj / zapisz PDF</button></div>';
   out += '<div class="pw-tiles" id="z_tiles"><div class="hl"><span>Wynagrodzenie lekarza</span><b>' + zl(T.pay) + '</b></div><div><span>Wartość zabiegów</span><b>' + zl(T.val) + '</b></div>' +
     '<div><span>Wizyty</span><b>' + T.n + '</b></div><div><span>Procedury</span><b>' + T.p + '</b></div><div><span>Średnio na wizytę (lekarz)</span><b>' + (T.n ? zl(Math.round(T.pay / T.n)) : '—') + '</b></div>' +
     (T.cost ? '<div><span>Koszty odliczone</span><b>' + zl(T.cost) + '</b></div>' : '') + '</div>';
@@ -737,6 +738,14 @@ function htmlZes() {
         '<div class="g-row" style="gap:6px"><button type="button" class="pw-ib" data-a="zuse" data-id="' + z.id + '">Dodaj do wizyty</button><button type="button" class="pw-ib" data-a="zedit" data-id="' + z.id + '">Edytuj</button><button type="button" class="pw-ib" data-a="zdup" data-id="' + z.id + '">Duplikuj</button><button type="button" class="pw-ib danger" data-a="zdel" data-id="' + z.id + '">Usuń</button></div></div>'; }).join('') + '</section>';
   });
   return out;
+}
+function csvExport() {                                          // Excel (PL): średnik, przecinek dziesiętny, UTF-8 z BOM
+  const { a, b, rows } = zarData(), q = v => { v = String(v == null ? '' : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }, n = c => ((c || 0) / 100).toFixed(2).replace('.', ',');
+  const lines = [['Data', 'Gabinet', 'Pacjent', 'Procedury', 'Liczba procedur', 'Wartość (zł)', 'Koszty (zł)', 'Wynagrodzenie lekarza (zł)'].join(';')];
+  rows.sort((x, y) => x.m.date.localeCompare(y.m.date)).forEach(r => lines.push([r.m.date, gabName(r.m.gab), whoOf(r.m), r.its.map(x => x.name + (x.qty > 1 ? ' ×' + x.qty : '')).join(', '), r.its.reduce((s, x) => s + (x.qty || 1), 0), n(r.val), n(r.cost), n(r.pay)].map(q).join(';')));
+  const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), el = document.createElement('a');
+  el.href = URL.createObjectURL(blob); el.download = 'opisy-prywatne-' + (S.zar.r === 'all' ? 'wszystko' : a + '_' + b) + '.csv'; document.body.appendChild(el); el.click();
+  setTimeout(() => { URL.revokeObjectURL(el.href); el.remove(); }, 1000); toast('Pobrano CSV: ' + rows.length + ' ' + plural(rows.length, 'wizyta', 'wizyty', 'wizyt'));
 }
 function addSet(id) {
   const z = (ZES.list || []).find(x => x.id === id); if (!z) return;
@@ -949,6 +958,8 @@ document.addEventListener('click', async e => {
   if (t.dataset.zadd) { addSet(t.dataset.zadd); return; }
   if (t.dataset.ins) { insAtCursor(t.dataset.ins); return; }
   const a = t.dataset.a; if (!a) return; const i = +t.dataset.i, it = V.items[i];
+  if (a === 'zcsv') { csvExport(); return; }
+  if (a === 'zprint') { window.print(); return; }
   if (a === 'pickhide') { S.pickOpen = false; S.kat = ''; S.q = ''; render(); return; }
   if (a === 'pickshow') { S.pickOpen = true; render(); return; }
   if (a === 'quick') { S.quick = !S.quick; uiSave(); render(); return; }
@@ -1001,8 +1012,8 @@ async function init() {
   S.ready = true;
   if (await draftRestore().catch(() => false)) { if (V.gab === 'auto' || V.date !== G.today()) S.gabAuto = await G.dayClinic(V.date, V.date === G.today() ? new Date().toTimeString().slice(0, 5) : '').catch(() => '') || ''; }
   render(); sumsPublish();
-  G.onLock(() => draftSaveNow());
-  window.addEventListener('pagehide', () => { draftSaveNow(); });
+  G.onLock(() => { clearTimeout(sT); return Promise.all([draftSaveNow(), sumsPublish()]); });   // sumy dnia od razu przy wyjściu z modułu (Kalendarz, strona główna)
+  window.addEventListener('pagehide', () => { draftSaveNow(); if (sT) { clearTimeout(sT); sT = null; sumsPublish(); } });
 }
 init().catch(e => { $('#main').innerHTML = '<div class="g-err">Nie udało się uruchomić modułu: ' + esc(e && e.message || e) + '</div>'; });
 </script>

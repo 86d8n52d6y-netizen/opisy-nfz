@@ -341,6 +341,68 @@
   };
 
   /* ---------- liczby: grosze ---------- */
+  /* kopia całości: wszystkie moduły w jednym pliku zaszyfrowanym hasłem (PBKDF2 → AES-GCM); wczytanie scala bez kasowania */
+  async function bkKey(pwd, salt, iter) {
+    const base = await crypto.subtle.importKey('raw', TE.encode(String(pwd).normalize('NFC')), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  }
+  const NFZ_ST = ['visits', 'bodies', 'segs'], BK_AAD = 'gabinet-kopia';
+  const lsPre = uid => ['opisyNFZ@' + uid + '.', 'pryw@' + uid + '.', 'grafik@' + uid + '.'];
+  G.backup = {
+    async export(pwd) {
+      if (!G.user) throw new Error('Brak zalogowanego użytkownika.');
+      const uid = G.user.id; await G.login(uid, pwd);                 // sprawdza hasło konta
+      const data = { app: 'gabinet', v: 1, at: new Date().toISOString(), uid, name: G.user.name, g: {}, nfz: {}, ls: {} }, n = { wizyty: 0, nfz: 0 };
+      for (const st of ['kv', 'wizyty', 'opisy']) data.g[st] = (await G.store(st).all()).filter(([k]) => !(st === 'kv' && /^suma:/.test(k)));
+      n.wizyty = data.g.wizyty.length;
+      const ndb = await idbExisting('opisyNFZ@' + uid);
+      if (ndb) { for (const st of NFZ_ST) { const rows = await readAll(ndb, st); data.nfz[st] = (await Promise.all(rows.map(([k, v]) => dec(v, 'nfz:' + st + ':' + k).then(x => [k, x], () => null)))).filter(Boolean); } try { ndb.close(); } catch (e) { } }
+      n.nfz = (data.nfz.visits || []).length;
+      lsPre(uid).forEach(pre => lsKeys(pre).forEach(k => { try { data.ls[k] = localStorage.getItem(k); } catch (e) { } }));
+      const salt = rnd(16), iv = rnd(12), key = await bkKey(pwd, salt, ITER);
+      const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: TE.encode(BK_AAD) }, key, TE.encode(JSON.stringify(data)));
+      const file = JSON.stringify({ app: 'gabinet-kopia', v: 1, at: data.at, kdf: { salt: b64(salt), iter: ITER }, iv: b64(iv), ct: b64(new Uint8Array(ct)) });
+      return { blob: new Blob([file], { type: 'application/json' }), name: 'gabinet-kopia-' + data.at.slice(0, 10) + '.json', n };
+    },
+    async import(text, pwd) {
+      if (!G.user) throw new Error('Brak zalogowanego użytkownika.');
+      let f; try { f = JSON.parse(text); } catch (e) { f = null; }
+      if (!f || f.app !== 'gabinet-kopia' || !f.kdf || !f.iv || !f.ct) throw new Error('To nie jest plik „kopii całości” aplikacji Gabinet.');
+      let data;
+      try { const key = await bkKey(pwd, unb64(f.kdf.salt), +f.kdf.iter || ITER); data = JSON.parse(TD.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(f.iv), additionalData: TE.encode(BK_AAD) }, key, unb64(f.ct)))); }
+      catch (e) { throw new Error('Nieprawidłowe hasło do kopii albo uszkodzony plik.'); }
+      if (!data || data.app !== 'gabinet' || typeof data.g !== 'object') throw new Error('Plik kopii ma nieznany układ.');
+      const uid = G.user.id, r = { kv: 0, wizyty: 0, nfz: 0, pominiete: [] }, newer = (a, b) => !b || String(a && a.at || '') > String(b.at || '');
+      const opisy = new Map(data.g.opisy || []);
+      for (const [k, v] of (data.g.kv || [])) {
+        if (/^suma:|^szkic/.test(k)) continue;
+        const cur = await G.store('kv').get(k).catch(() => null);
+        const NAZ = { grafik: 'Kalendarz', 'pryw:cennik': 'cennik', 'pryw:katalog': 'szablony prywatne', 'pryw:zestawy': 'zestawy', 'pryw:ust': 'ustawienia Opisów prywatnych', 'nfz:seg': 'stałe teksty NFZ' };
+        if (cur === undefined) { await G.store('kv').put(k, v); r.kv++; } else r.pominiete.push(NAZ[k] || k);
+      }
+      for (const [k, v] of (data.g.wizyty || [])) {
+        const cur = await G.store('wizyty').get(k).catch(() => undefined);
+        if (newer(v, cur)) { if (opisy.has(k)) await G.store('opisy').put(k, opisy.get(k)); await G.store('wizyty').put(k, v); r.wizyty++; }
+      }
+      if ((data.nfz.visits || []).length) {
+        const db = await idbOpen('opisyNFZ@' + uid, NFZ_ST, 1), bodies = new Map(data.nfz.bodies || []);
+        const cur = new Map((await Promise.all((await readAll(db, 'visits')).map(([k, v]) => dec(v, 'nfz:visits:' + k).then(x => [k, x], () => null)))).filter(Boolean));
+        const haveSeg = new Set((await readAll(db, 'segs')).map(x => x[0]));
+        const ops = [];
+        for (const [k, v] of data.nfz.visits) if (newer(v, cur.get(k))) { ops.push(['visits', k, v]); if (bodies.has(k)) ops.push(['bodies', k, bodies.get(k)]); r.nfz++; }
+        for (const [k, v] of (data.nfz.segs || [])) if (!haveSeg.has(k)) ops.push(['segs', k, v]);
+        const encd = await Promise.all(ops.map(([st, k, v]) => enc(v, 'nfz:' + st + ':' + k).then(x => [st, k, x])));
+        await run(db, NFZ_ST, 'readwrite', t => { encd.forEach(([st, k, x]) => t.objectStore(st).put(x, k)); });
+        try { db.close(); } catch (e) { }
+      }
+      Object.entries(data.ls || {}).forEach(([k, v]) => {                   // ustawienia modułów: tylko gdy na tym koncie ich jeszcze nie ma
+        const m = /^(opisyNFZ|pryw|grafik)@[^.]*\.(.+)$/.exec(k); if (!m || typeof v !== 'string') return;
+        const nk = m[1] + '@' + uid + '.' + m[2]; try { if (localStorage.getItem(nk) === null) localStorage.setItem(nk, v); } catch (e) { }
+      });
+      return r;
+    }
+  };
+
   G.zl = c => (Math.round(c) / 100).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
   G.today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 })();

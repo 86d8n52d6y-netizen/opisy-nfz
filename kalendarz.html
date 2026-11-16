@@ -198,6 +198,8 @@ input::placeholder{color:var(--muted)}
 .clinic-pick button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .calc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:4px;font-size:13.5px;color:var(--ink-2)}
 .calc .big{font-size:24px;font-weight:700;color:var(--ink)}
+.hint-box{border:1px dashed var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:4px;margin:8px 0;background:var(--surface)}
+.hint-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .calc-split{display:flex;gap:6px 16px;flex-wrap:wrap}
 .calc-split b{color:var(--ink)}
 .confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--crit-bg);color:var(--crit-text);border-radius:10px;padding:8px 10px;font-weight:600;font-size:13.5px}
@@ -1265,7 +1267,9 @@ var Store = {
     this.mode = 'local';
     try { this.docs = (await G.store('kv').get('grafik')) || {}; }
     catch (e) { this.docs = {}; this.readError = true; toast('Nie udało się odczytać danych Kalendarza – zmiany nie zostaną zapisane, dopóki dane nie wrócą.'); }
+    await loadSums();
     afterLoad(); autoAfterLoad(); publishKal();
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) loadSums().then(function () { if (UI.edit) render(); }); });
     G.onLock(function () { return Store.flushAll(); });
     window.addEventListener('pagehide', function () { Store.flushAll(); });
   },
@@ -1640,6 +1644,24 @@ function formulaText(sh, c, inc) {
   if ((num(c.minDaily) || 0) > 0) s += ' (minimum ' + zl0(c.minDaily) + ')';
   return s + ' = ' + zl(inc);
 }
+/* podpowiedź z opisów: sumy dnia z Opisów NFZ i prywatnych dla gabinetu dyżuru (G.sums, zaszyfrowane) */
+var SUMS = { nfz: {}, pryw: {} };
+function loadSums() { return Promise.all([G.sums.get('nfz'), G.sums.get('pryw')]).then(function (r) { SUMS = { nfz: r[0] || {}, pryw: r[1] || {} }; }, function () { }); }
+function daySums(date, cid) {
+  var a = (SUMS.nfz[date] || {})[cid], b = (SUMS.pryw[date] || {})[cid];
+  var nfz = a ? { n: a.n || 0, val: ((a.pc || 0) + (a.rv || 0) + (a.ex || 0)) / 100 } : null;
+  var pr = b ? { n: b.n || 0, val: (b.val || 0) / 100, cost: (b.cost || 0) / 100 } : null;
+  return (nfz && (nfz.n || nfz.val)) || (pr && (pr.n || pr.val)) ? { nfz: nfz, pr: pr } : null;
+}
+function hintHtml(d) {
+  var h = daySums(d.date, d.clinicId); if (!h) return '';
+  var tot = (h.nfz ? h.nfz.val : 0) + (h.pr ? h.pr.val : 0), w = function (n) { return n + (n === 1 ? ' wizyta' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? ' wizyty' : ' wizyt'); };
+  return '<div class="hint-box" id="sumHint"><div class="small"><b>Z opisów tego dnia w tym gabinecie</b></div>' +
+    (h.nfz ? '<div class="small tn">Opisy NFZ: ' + w(h.nfz.n) + ' · wartość ' + zl(h.nfz.val) + ' <span class="muted">(punkty + przeglądy + kwoty dodatkowe)</span></div>' : '') +
+    (h.pr ? '<div class="small tn">Opisy prywatne: ' + w(h.pr.n) + ' · wartość ' + zl(h.pr.val) + (h.pr.cost ? ' · koszty ' + zl(h.pr.cost) : '') + '</div>' : '') +
+    '<div class="hint-btns"><button type="button" class="btn sm" data-a="f-hint" data-v="all">Wpisz jako obrót: ' + zl(tot) + '</button>' +
+    (h.nfz && h.pr ? '<button type="button" class="btn ghost sm" data-a="f-hint" data-v="nfz">tylko NFZ</button><button type="button" class="btn ghost sm" data-a="f-hint" data-v="pr">tylko prywatne</button>' : '') + '</div></div>';
+}
 function calcHtml() {
   var d = UI.edit.draft, c = clinic(d.clinicId); if (!c) return '';
   var sh = draftShift(d), real = d.status === 'done' || hasMoney(sh) || c.model === 'hourly' || c.model === 'daily';
@@ -1660,7 +1682,7 @@ function editorHtml() {
   }).join('') + '</div>';
   var money = '';
   if (/^pct/.test(c.model)) money = '<div class="frow"><label class="f">Obrót (wykonane zabiegi)<input type="text" inputmode="decimal" id="f-turnover" value="' + esc(d.turnover) + '" placeholder="np. 5200"></label>' +
-    '<label class="f">Lab / implanty<input type="text" inputmode="decimal" id="f-lab" value="' + esc(d.lab) + '" placeholder="0"></label></div>';
+    '<label class="f">Lab / implanty<input type="text" inputmode="decimal" id="f-lab" value="' + esc(d.lab) + '" placeholder="0"></label></div>' + hintHtml(d);
   else if (c.model === 'manual') money = '<label class="f">Kwota dla Ciebie<input type="text" inputmode="decimal" id="f-amount" value="' + esc(d.amount) + '"></label>';
   else money = '<p class="small muted">' + (c.model === 'hourly' ? 'Stawka ' + zl(c.hourly) + '/h × godziny dyżuru' : 'Stawka ' + zl(c.daily) + ' za dzień') + ' – zmienisz ją w ustawieniach gabinetu.</p>';
   return '<form class="editor" id="shiftForm" autocomplete="off"><h4>' + (e.id ? 'Edytuj dyżur' : 'Nowy dyżur') + '</h4>' + cl + presetChips(c, d) +
@@ -2733,6 +2755,14 @@ var ACT = {
   'edit-cancel': function () { UI.edit = null; UI.confirm = null; render(); },
   'f-clinic': function (el) { var d = UI.edit.draft, c = clinic(el.dataset.v); d.clinicId = c.id; if (!d.timesTouched) { d.start = c.defStart; d.end = c.defEnd; } render(); },
   'f-status': function (el) { UI.edit.draft.status = el.dataset.v; render(); },
+  'f-hint': function (el) {
+    var d = UI.edit.draft, h = daySums(d.date, d.clinicId); if (!h) return; var v = el.dataset.v;
+    var t = (v !== 'pr' && h.nfz ? h.nfz.val : 0) + (v !== 'nfz' && h.pr ? h.pr.val : 0);
+    d.turnover = String(Math.round(t * 100) / 100).replace('.', ',');
+    if (v !== 'nfz' && h.pr && h.pr.cost && !num(d.lab)) d.lab = String(Math.round(h.pr.cost * 100) / 100).replace('.', ',');
+    if (d.status === 'planned' && d.date <= todayStr()) d.status = 'done';
+    render(); toast('Wpisano obrót z opisów – sprawdź i zapisz dyżur.');
+  },
   'ask-del': function () { UI.confirm = 'del'; render(); },
   'no-del': function () { UI.confirm = null; render(); },
   'do-del': function () { deleteShift(UI.edit.id); UI.edit = null; UI.confirm = null; render(); toast('Usunięto dyżur'); },
@@ -3689,7 +3719,7 @@ document.addEventListener('toggle', function (ev) { var t = ev.target; if (UI.co
 /* ===== start: po wczytaniu wszystkich części ===== */
 boot();
 /* uchwyt dla testów i dla innych części aplikacji na tej samej stronie (nie wysyła niczego na zewnątrz) */
-window.Kal = { UI: UI, Store: Store, S: S, M: M, saveSettings: saveSettings, saveMonth: saveMonth, uid: uid, E: E };
+window.Kal = { UI: UI, Store: Store, S: S, M: M, saveSettings: saveSettings, saveMonth: saveMonth, uid: uid, E: E, openEditor: openEditor, render: render, loadSums: loadSums };
 
 })();
 </script>

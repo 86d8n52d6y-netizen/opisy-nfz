@@ -81,3 +81,4 @@
 .g-sep{border:0;border-top:1px solid var(--g-line);margin:18px 0}
 .g-busy{position:fixed;inset:0;background:rgba(0,0,0,.25);display:grid;place-items:center;z-index:100}
 .g-busy div{background:var(--g-surface);color:var(--g-ink);padding:16px 22px;border-radius:12px;font-weight:600}
+.g-tbl td:first-child,.g-tbl th:first-child{white-space:nowrap}
