@@ -600,9 +600,10 @@ function nfzIssues(){
     if(!an.length)err.push({codes:[c],msg:`${c}, ząb ${t}: NFZ wymaga wskazania co najmniej jednego znieczulenia (lista procedur ST1) – inaczej pakiet nie zostanie rozliczony.`});});});
   ['ST30E','ST30G'].forEach(c=>{if(has(c)&&a!==null&&a>=18)err.push({codes:[c],msg:`${c}: pakiety profesjonalnej higienizacji (ST30D–ST30G) są przeznaczone dla dzieci i młodzieży do 18 r.ż.`});});
   const vt=visitTime(),tot=vt.nfz;
-  if(vt.req>SLOT_MIN)warn.push({codes:[],msg:`Wymagany czas wizyty: ${num(vt.req)} min (pakiety higienizacyjne ${num(vt.decl)} min${vt.extra?' + 10 min za ekstrakcję / leczenie zachowawcze':''}) – więcej niż standardowa wizyta 30 min.`});
+  if(vt.decl>SLOT_MIN)warn.push({codes:[],msg:`Pakiety higienizacyjne zajmują ${num(vt.decl)} min – więcej niż standardowa wizyta ${SLOT_MIN} min${vt.extra?`; z doliczeniem 10 min za ekstrakcję / leczenie zachowawcze wizyta trwa ${vt.sug} min`:''}.`});
   if(vt.manual&&vt.hyg.length&&vt.val<vt.nfz)err.push({codes:[],msg:`Czas wizyty ${vt.val} min jest krótszy niż suma minimalnych czasów pakietów NFZ (${vt.nfz} min).`});
-  else if(vt.manual&&vt.val<vt.req)warn.push({codes:[],msg:`Czas wizyty ${vt.val} min jest krótszy niż wymagane ${num(vt.req)} min (pakiety higienizacyjne ${num(vt.decl)} min${vt.extra?' + 10 min':''}).`});
+  else if(vt.manual&&vt.extra&&vt.val<vt.sug)warn.push({codes:[],msg:`Czas wizyty ${vt.val} min nie zawiera doliczenia 10 min za ekstrakcję / leczenie zachowawcze przy pakiecie higienizacyjnym – wg zasady powinno być ${vt.sug} min.`});
+  else if(vt.manual&&vt.hyg.length&&vt.val<vt.decl)warn.push({codes:[],msg:`Czas wizyty ${vt.val} min jest krótszy niż czas pakietów higienizacyjnych wpisany w opisie (${num(vt.decl)} min).`});
   if(cs.some(c=>NFZ_MIN[c])&&(a===null||a<18))warn.push({codes:[],msg:'U dzieci i młodzieży do 18 r.ż. usuwanie złogów – nie częściej niż 1× na 6 miesięcy (komunikat NFZ). Sprawdź datę poprzedniego zabiegu.'});
   cs.forEach(c=>{if(NFZ_LIMIT[c])warn.push({codes:[c],msg:`${c}: limit NFZ – ${NFZ_LIMIT[c]}.`,soft:true});});
   return {err,warn,tot,vt};
@@ -611,7 +612,7 @@ function nfzBox(){
   const {err,warn,tot,vt}=nfzIssues();
   const hard=warn.filter(w=>!w.soft);
   if(!state.codes.length) return '<div id="nfz-box"></div>';
-  const timeLine=tot?`<div class="note">Minimalny czas wg NFZ dla wybranych pakietów: <b>${tot} min</b> (pozostałe kody – zarządzenie nie określa minimum).${vt.extra?` Do czasu wizyty doliczono <b>10 min</b>: pakiet higienizacyjny i ${esc(vt.extraCodes.join(', '))} na jednej wizycie – raz, niezależnie od liczby zębów i procedur. Wymagany czas wizyty: <b>${num(vt.req)} min</b>.`:''}</div>`:'';
+  const timeLine=tot?`<div class="note">Minimalny czas wg NFZ dla wybranych pakietów: <b>${tot} min</b> (pozostałe kody – zarządzenie nie określa minimum).${vt.extra?` Do czasu wizyty doliczono <b>10 min</b>: pakiet higienizacyjny i ${esc(vt.extraCodes.join(', '))} na jednej wizycie – raz, niezależnie od liczby zębów i procedur. Czas wizyty: <b>${vt.sug} min</b> (${vt.base} + 10).`:''}</div>`:'';
   if(!err.length&&!hard.length&&!timeLine) return '<div id="nfz-box"></div>';
   return `<div id="nfz-box" class="nfz">${err.map(e=>`<div class="err" role="alert"><b>Błąd NFZ:</b> ${esc(e.msg)}</div>`).join('')}${hard.map(w=>`<div class="warn">${esc(w.msg)}</div>`).join('')}${timeLine}${err.length||hard.length?`<div class="nfz-src">${esc(NFZ_SRC)}</div>`:''}</div>`;
 }
@@ -955,8 +956,9 @@ function packTxt(txt){
 
 /* ---------- czas wizyty ----------
    Zasada: pakiet higienizacyjny (ST30, ST30E, ST30G) + ekstrakcja lub leczenie zachowawcze na tej samej wizycie = +10 min do czasu wizyty,
-   doliczane raz – niezależnie od liczby zębów i liczby dodatkowych procedur. Podstawą jest czas pakietów wpisany w opisie
-   (nie mniej niż minimum NFZ). Wizyta nie jest krótsza niż standardowe 30 min; pole „Czas wizyty” pozwala wpisać własną wartość. */
+   doliczane raz – niezależnie od liczby zębów i liczby dodatkowych procedur.
+   Czas wizyty bez dodatkowych procedur = standardowe 30 min, a gdy same pakiety higienizacyjne zajmują więcej (czas z opisu, nie mniej
+   niż minimum NFZ) – czas pakietów. Pole „Czas wizyty” pozwala wpisać własną wartość. */
 const HYG_EXTRA=['ST01','ST02','1108','1502','1503','1504','1505','1105','1206'];     // ekstrakcje + leczenie zachowawcze
 function visitTime(){
   const hyg=state.codes.filter(c=>NFZ_MIN[c]);
@@ -964,18 +966,19 @@ function visitTime(){
   hyg.forEach(c=>{const mn=nfzMin(c),v=parseNum(state.a[c+'.czas']);nfz+=mn;decl+=Math.max(mn,isNaN(v)?0:v);});
   const extraCodes=hyg.length?state.codes.filter(c=>HYG_EXTRA.includes(c)):[];
   const extra=extraCodes.length?10:0;
-  const req=hyg.length?decl+extra:0;
-  const sug=Math.max(SLOT_MIN,Math.ceil(req));
+  const base=Math.max(SLOT_MIN,Math.ceil(decl));                   // wizyta bez dodatkowych procedur
+  const sug=base+extra;                                            // podpowiadany czas wizyty
   const raw=str(state.a['sv.min']),man=parseNum(raw),manual=raw!==''&&!isNaN(man)&&man<=1440;
-  return {hyg,nfz,decl,extraCodes,extra,req,sug,manual,bad:raw!==''&&!manual,val:manual?Math.round(man):sug};
+  return {hyg,nfz,decl,extraCodes,extra,base,sug,manual,bad:raw!==''&&!manual,val:manual?Math.round(man):sug};
 }
 function timeNote(vt){
-  const base=vt.hyg.length
-    ?(vt.extra?`pakiety higienizacyjne ${num(vt.decl)} min + 10 min (ekstrakcja / leczenie zachowawcze: ${vt.extraCodes.join(', ')} – doliczane raz) = ${num(vt.req)} min`
-              :`pakiety higienizacyjne ${num(vt.decl)} min, bez ekstrakcji i leczenia zachowawczego – nic się nie dolicza`)
-    :'bez pakietu higienizacyjnego – zasada +10 min nie dotyczy';
-  if(vt.manual)return `Czas wizyty wpisany ręcznie: ${vt.val} min. Podpowiedź: ${vt.sug} min (${base}).`;
-  return `Czas wizyty: ${vt.sug} min – ${base}${vt.req<SLOT_MIN?'; przyjęto standardową wizytę 30 min':''}.`;
+  const b=vt.base>SLOT_MIN?`${vt.base} min (czas pakietów higienizacyjnych)`:`standardowe ${SLOT_MIN} min`;
+  const why=vt.hyg.length
+    ?(vt.extra?`${b} + 10 min za ekstrakcję / leczenie zachowawcze przy pakiecie higienizacyjnym (${vt.extraCodes.join(', ')} – doliczane raz) = ${vt.sug} min`
+              :`${b}; pakiet higienizacyjny bez ekstrakcji i leczenia zachowawczego – nic się nie dolicza`)
+    :`${b}; bez pakietu higienizacyjnego zasada +10 min nie dotyczy`;
+  if(vt.manual)return `Czas wizyty wpisany ręcznie: ${vt.val} min. Podpowiedź: ${vt.sug} min – ${why}.`;
+  return `Czas wizyty: ${vt.sug} min – ${why}.`;
 }
 
 /* ---------- rozliczenie bieżącej wizyty (krok 3) ---------- */
@@ -1347,7 +1350,8 @@ function curRange(){
   if(r.p==='custom'){let f=validDate(r.from)?r.from:todayISO(),t=validDate(r.to)?r.to:f;if(t<f){const x=f;f=t;t=x;}return {p:'custom',from:f,to:t};}
   const x=rangeOf(r.p);return {p:r.p,from:x[0],to:x[1]};
 }
-function calDays(from,to){const t=todayISO(),end=(from<=t&&to>t)?t:to;return Math.max(1,daysBetween(from,end)+1);}   // dni kalendarzowe, bez dni z przyszłości
+function calDays(from,to,last){const t=todayISO();let end=to;if(to>t){end=from<=t?t:from;if(last&&last>end)end=last<to?last:to;}return Math.max(1,daysBetween(from,end)+1);}   // dni kalendarzowe zakresu; dni z przyszłości liczą się tylko do ostatniego wpisu
+const lastDate=items=>items.reduce((mx,m)=>m.date>mx?m.date:mx,'');
 const avgC=(c,n)=>n?Math.round(c/n):0;
 function visTotal(items){return items.reduce((s,m)=>s+(isVisit(m)?calc(m).total:0),0);}
 function grp(list,keyFn){const mp=new Map();list.forEach(x=>{const k=keyFn(x);if(!mp.has(k))mp.set(k,[]);mp.get(k).push(x);});
@@ -1390,7 +1394,7 @@ function structHTML(A){
    <div class="legend2">${parts.map(p=>`<span class="lg"><i class="lgs s-${p[0]}"></i>${p[1]} <b>${fmtC(p[2])}</b>${p[2]/tot*100<12?' · '+fmtP(Math.round(p[2]/tot*1000)/10)+'%':''}</span>`).join('')}</div></div>`;
 }
 function kpiHTML(A,R,list){
-  const wd=A.days.size,cd=calDays(R.from,R.to),vt=visTotal(list);
+  const wd=A.days.size,cd=calDays(R.from,R.to,lastDate(list)),vt=visTotal(list);
   const tile=(lab,val,sub)=>`<div class="tile"><span class="tl">${lab}</span><span class="tv">${val}</span>${sub?`<span class="ts">${sub}</span>`:''}</div>`;
   return `<section class="card"><div class="hero"><span class="tl">Zarobek razem · ${fmtDate(R.from)} – ${fmtDate(R.to)}</span><span class="hv">${fmtC(A.total)}</span></div>
    <div class="tiles">
@@ -1430,9 +1434,9 @@ function tabMonths(list,R){
   const row=(a,A,d,cd,vt)=>[a,'<b>'+fmtC(A.total)+'</b>',d,A.days.size,A.vis,fmtP(A.ptsC/100),fmtC(A.pe),fmtC(A.rv),fmtC(A.ex),fmtC(avgC(A.total,A.days.size)),fmtC(avgC(A.total,cd)),fmtC(avgC(vt,A.vis)),fmtMin(A.work)];
   const rows=g.map((x,i)=>{const f=x.k+'-01',pv=g[i-1]&&g[i-1].k===monthShift(f,-1).slice(0,7)?g[i-1].A.total:null;
     const d=pv?((x.A.total>=pv?'▲ +':'▼ −')+fmtP(Math.abs(Math.round((x.A.total-pv)/pv*1000)/10))+'%'):'—';
-    return row(nm(x.k),x.A,d,calDays(f,monthEnd(f)),visTotal(x.items));});
+    return row(nm(x.k),x.A,d,calDays(f,monthEnd(f),lastDate(x.items)),visTotal(x.items));});
   const hint=g.length<2?'<p class="note">W wybranym zakresie jest jeden miesiąc. Aby porównać z poprzednimi, wybierz zakres <button type="button" class="mini" data-act="range" data-p="y12">Ostatnie 12 mies.</button> albo <button type="button" class="mini" data-act="range" data-p="all">Wszystko</button>.</p>':'';
-  return chart+hint+tableHTML(cols,rows.reverse(),row('Razem',T,'',calDays(R.from,R.to),visTotal(list)));
+  return chart+hint+tableHTML(cols,rows.reverse(),row('Razem',T,'',calDays(R.from,R.to,lastDate(list)),visTotal(list)));
 }
 function tabDow(list){
   const by=[0,1,2,3,4,5,6].map(d=>{const items=list.filter(m=>dowOf(m.date)===d);return {d,items,A:agg(items)};});
@@ -1822,7 +1826,9 @@ document.addEventListener('change',e=>{
   const t=e.target,ds=t.dataset||{};
   if(t.id==='bk-file'){const f=t.files&&t.files[0];t.value='';if(f)backupImport(f);return;}
   if(ds.cfg){t.value=num(ds.cfg==='rev'?cfg.rev:(state.step===3?vPrice():cfg.price));if(state.step===3){autoSave();refreshSave();}return;}   // bez przebudowy widoku – nie gubi kliknięcia
-  if(ds.ui==='from'||ds.ui==='to'){const R=curRange();ui.range={p:'custom',from:ds.ui==='from'?t.value:R.from,to:ds.ui==='to'?t.value:R.to};render();return;}
+  if(ds.ui==='from'||ds.ui==='to'){const R=curRange();let f=ds.ui==='from'?t.value:R.from,to=ds.ui==='to'?t.value:R.to;
+    if(validDate(f)&&validDate(to)&&to<f){if(ds.ui==='from')to=f;else f=to;}      // zmieniane pole wygrywa: drugie dopasowuje się, zamiast zamieniać daty miejscami
+    ui.range={p:'custom',from:f,to};render();return;}
   if(ds.f||ds.ui)return;
   if(ds.x){if(ds.x.charAt(0)==='v'){autoSave();refreshSave();}return;}
   const k=ds.key;if(!k)return;

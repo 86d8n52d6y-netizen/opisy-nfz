@@ -15,7 +15,7 @@ if ! curl -sf -o /dev/null "http://127.0.0.1:$PORT/szablony.js"; then
 fi
 export OPISY_URL="http://127.0.0.1:$PORT/index.html" OPISY_V9_URL="http://127.0.0.1:$PORT/testy/.v9/index.html"
 rc=0
-if [ $# -gt 0 ]; then files=("$@"); else files=(t*.py); fi
+if [ $# -gt 0 ]; then files=("$@"); else files=(testy/t*.py); fi
 for f in "${files[@]}"; do
   python3 "testy/$(basename "$f")" 2>&1 | grep -v "agent-proxy\|connect_rejected\|Allowed domains\|For details\|^$" ; [ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
 done

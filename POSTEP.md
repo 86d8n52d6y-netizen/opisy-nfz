@@ -2,7 +2,7 @@
 
 Plik do wznawiania pracy po przerwie (np. po wyczerpaniu limitu). Aktualizowany po każdym etapie.
 
-## Stan na 2026-11-15 (wieczór)
+## Stan na 2026-11-16 (noc)
 - `main` = działająca strona na GitHub Pages (commit `e8476e8`, wersja z 17:43) – **bez zmian do czasu scalenia**.
 - Gałąź `porzadek-pracy` = rozbudowa aplikacji według specyfikacji „Ewidencja wizyt, punktów, czasu pracy i zarobków” (6 etapów, niżej).
 - Pliki: `index.html` (UI, logika, wycena `PTS`, zapis wizyt), `szablony.js` (stałe teksty `SEG`), `testy/` (testy w przeglądarce).
@@ -13,8 +13,8 @@ Plik do wznawiania pracy po przerwie (np. po wyczerpaniu limitu). Aktualizowany 
 |---|---|---|
 | 1. Audyt obecnej aplikacji | ✅ zrobione | `2d9ef5e` |
 | 2. Plan zmian | ✅ zrobione | `67da90b` |
-| 3. Wdrożenie | ✅ zrobione (kod w repo; poprawki po testach w etapach 4–5) | ten commit |
-| 4. Testowanie | ⏳ następny | |
+| 3. Wdrożenie | ✅ zrobione (kod w repo; poprawki po testach w etapach 4–5) | `e168554` |
+| 4. Testowanie | ⏳ w toku – część 1 (T0–T5) w repo; zostały T6–T11 | ten commit |
 | 5. Optymalizacja | – | |
 | 6. Raport końcowy + scalenie do `main` | – | |
 
@@ -80,7 +80,7 @@ Została przejrzana w całości, wiersz po wierszu, i przejęta jako baza Etapu 
 | 4 | Dotychczas: jedna wizyta = jeden wpis nadpisywany przy każdej zmianie (błąd 1 z audytu) | Zostaje „jedna wizyta = jeden wpis do »Następny pacjent«”, ale zapis jest wstrzymywany i aplikacja pyta, gdy formularz wygląda na innego pacjenta: inne inicjały, inny wiek, zamienione zabiegi albo inne API i GI |
 | 5 | Zaokrąglenia (błąd 3) | Wszystkie kwoty liczone w groszach na liczbach całkowitych, połówki w górę |
 | 6 | Co jest „pakietem higienizacyjnym” i „procedurą zachowawczą” | Pakiety: ST30, ST30E, ST30G. Doliczenie +10 min wywołują: ST01, ST02 (ekstrakcje) oraz 1105, 1108, 1206, 1502–1505 (grupa „Leczenie zachowawcze” w aplikacji). Nie wywołują: 1101, 1006 (profilaktyka), ST19, ST04, ST26, badania |
-| 7 | Do jakiego czasu doliczać 10 min | Do czasu pakietów wpisanego w opisie (nie mniej niż minimum NFZ); wizyta nie krótsza niż standardowe 30 min; pole „Czas wizyty” pozwala wpisać własną wartość |
+| 7 | Do jakiego czasu doliczać 10 min | Do **czasu wizyty**: standardowe 30 min + 10 = 40 min; gdy same pakiety zajmują więcej niż 30 min (czas z opisu, nie mniej niż minimum NFZ) – czas pakietów + 10 (np. ST30 ×4: 40 + 10 = 50 min). Pole „Czas wizyty” pozwala wpisać własną wartość. *(Zmienione w Etapie 4: pierwsza wersja doliczała 10 min do czasu pakietu z opisu, co dawało 21 + 10 = 31 min i zasada prawie nic nie zmieniała.)* |
 | 8 | Wpis z samymi przeglądami lub kwotą dodatkową | Nie liczy się jako wizyta pacjenta (nie zawyża liczby wizyt ani średniej na wizytę), ale wchodzi do zarobku i czasu pracy |
 | 9 | „Dzień przepracowany”, „tydzień” | Dzień przepracowany = dzień z co najmniej jednym wpisem; tydzień = poniedziałek–niedziela; średnia na dzień kalendarzowy nie liczy dni z przyszłości |
 | 10 | Kopia zapasowa a istniejące dane | Wczytanie kopii scala: dodaje brakujące wpisy, istniejący zastępuje tylko nowszą wersją; ten sam plik przenosi dane między urządzeniami |
@@ -105,6 +105,27 @@ Cała logika w `index.html` (z 106 kB do ok. 190 kB), `szablony.js` bez zmian. C
 
 Sprawdzone przed tym commitem: `bash sprawdz.sh`, `testy/t0_dym.py` (9/9), `testy/t1_obliczenia.py` (25/25). Pełne testy – Etap 4.
 
+### ETAP 4 – Testowanie (w toku)
+
+Testy działają na prawdziwej aplikacji w przeglądarce Chrome (bez okna): klikają i wpisują jak użytkownik, a wyniki porównują
+z niezależnym liczeniem w Pythonie (ułamki dziesiętne `Decimal`, kalendarz `datetime`). Uruchomienie: `bash testy/uruchom.sh`.
+
+| Test | Co sprawdza | Wynik |
+|---|---|---|
+| `t0_dym.py` | przejście przez wszystkie widoki, zapis pierwszej wizyty | 9/9 |
+| `t1_obliczenia.py` | przykłady ze specyfikacji (100 pkt = 184 zł … 0,5 h = 175 zł), 10 tys. losowych przeliczeń, zaokrąglenia, parsowanie liczb, 3000 dat (tydzień ISO, dzień tygodnia) | 25/25 |
+| `t2_zapis.py` | tryb z inicjałami i automatyczny, brak dubli i zbędnych zapisów, pytanie zamiast nadpisania (inne inicjały / wiek / zabiegi / API+GI), ponowne uruchomienie, usunięcie i edycja wpisu bieżącej wizyty | 38/38 |
+| `t3_czas.py` | zasada +10 min (1 ząb, kilka zębów, kilka procedur – zawsze raz), które kody ją wywołują, limity NFZ, czas ręczny, zapis czasu we wpisie | 23/23 |
+| `t4_wpisy.py` | szybki wpis (punkty / przeglądy / kwota), 10 rodzajów błędnych danych, edycja kwot i stawek wpisu, anulowanie, usuwanie, wyszukiwanie, sumy po każdej zmianie | 27/27 |
+| `t5_statystyki.py` | 1060 wpisów z 13 miesięcy: kafelki i wszystkie tabele (Dni, Tygodnie, Miesiące, Dni tygodnia) dla 11 zakresów i obu podstaw; suma dni = tygodni = miesięcy; wpisy anonimowe; edycja i usunięcie; wykresy | 27/27 |
+| T6–T11 | migracja starej historii, kopia zapasowa, awaria magazynu danych, zgodność opisów ze starą wersją, bezpieczeństwo wczytywanej kopii, wygląd (telefon), wydajność | do zrobienia |
+
+**Poprawki wprowadzone w trakcie testów (część 1):**
+1. Zasada +10 min liczona od czasu wizyty (30 → 40 min), a nie od czasu pakietu z opisu (było 21 + 10 = 31 min).
+2. Statystyki, pola „Od–Do”: zmieniane pole wygrywa, drugie się dopasowuje (wcześniej daty zamieniały się miejscami i zakres wychodził inny niż wpisany).
+3. Dni kalendarzowe w zakresie sięgającym w przyszłość liczone do ostatniego wpisu (nie tylko do dziś).
+4. Skrypt `testy/uruchom.sh` bez argumentów uruchamia wszystkie testy.
+
 ## Zrobione wcześniej
 - [x] Szablony: pacjent poniżej i powyżej 5 r.ż., plany wizyt I–IV
 - [x] Wycena punktowa (zarz. 95/2026/DSOZ, 44/2025/DSOZ), kwota i udział lekarza 40%/35%
@@ -118,3 +139,4 @@ Sprawdzone przed tym commitem: `bash sprawdz.sh`, `testy/t0_dym.py` (9/9), `test
 | 2026-11-15 | `porzadek-pracy` | ETAP 1: audyt wersji z `main` – 6 potwierdzonych problemów (w tym nadpisywanie wpisu), skrypt `testy/audyt_v9.py` |
 | 2026-11-15 | `porzadek-pracy` | ETAP 2: plan zmian – mapa wymagań i 10 rozstrzygnięć konfliktów z dotychczasowym działaniem |
 | 2026-11-15 | `porzadek-pracy` | ETAP 3: wdrożenie w `index.html` – ewidencja wizyt, dwa tryby zapisu, przeglądy, kwoty dodatkowe, +10 min, statystyki, kopia zapasowa |
+| 2026-11-16 | `porzadek-pracy` | ETAP 4, część 1: testy T0–T5 (149 sprawdzeń, wszystkie OK), 3 poprawki w aplikacji |

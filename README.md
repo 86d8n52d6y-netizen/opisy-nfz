@@ -12,7 +12,7 @@ Pod tabelą wyceny: stawka za punkt (domyślnie **1,84 zł**, zmienisz ją w pol
 
 ## Rozliczenie wizyty (krok 3)
 Pod wyceną jest „Rozliczenie wizyty” – trafia do ewidencji, nie do opisu:
-- **Czas wizyty** – podpowiadany sam: standardowo 30 min; gdy na wizycie jest pakiet higienizacyjny (ST30, ST30E, ST30G) **i** ekstrakcja (ST01, ST02) albo leczenie zachowawcze (1105, 1108, 1206, 1502–1505), do czasu pakietów dolicza się **10 min – raz**, niezależnie od liczby zębów i procedur. Można wpisać własny czas.
+- **Czas wizyty** – podpowiadany sam: standardowo 30 min; gdy na wizycie jest pakiet higienizacyjny (ST30, ST30E, ST30G) **i** ekstrakcja (ST01, ST02) albo leczenie zachowawcze (1105, 1108, 1206, 1502–1505), do czasu wizyty dolicza się **10 min – raz**, niezależnie od liczby zębów i procedur (30 + 10 = 40 min; gdy same pakiety zajmują więcej niż 30 min, np. ST30 w 4 ćwiartkach = 40 min, to 40 + 10 = 50 min). Można wpisać własny czas.
 - **Przeglądy** – liczba godzin (także ułamki, np. 1,5) × **350 zł/h**.
 - **Dodatkowe zarobki** – dowolna liczba pozycji „kwota + opis”, osobna kategoria przychodu (nie mieszają się z punktami).
 
