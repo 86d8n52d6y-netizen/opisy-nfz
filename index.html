@@ -65,7 +65,7 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
 .btn{font:inherit;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:9px 16px;cursor:pointer}
 .btn.ghost{background:transparent;color:var(--accent)}
 .btn.sm{padding:5px 10px;font-size:13px;font-weight:500}
-.mini{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer}
+.mini{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:6px;padding:2px 8px;min-height:24px;cursor:pointer}   /* min. 24 px – wygodne dotknięcie na telefonie (WCAG 2.5.8) */
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .chip{font-family:var(--font-mono);font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:7px;padding:5px 9px;cursor:pointer;text-align:left}
@@ -74,7 +74,7 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
 .group{margin-top:12px}.group h3{font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 2px}
 .sel-list{display:flex;flex-wrap:wrap;gap:6px;min-height:34px;align-items:center}
 .sel-list .code{display:inline-flex;align-items:center;gap:6px}
-.sel-list .code button{border:0;background:transparent;color:inherit;cursor:pointer;font-size:15px;line-height:1;padding:0}
+.sel-list .code button{border:0;background:transparent;color:inherit;cursor:pointer;font-size:15px;line-height:1;padding:0;min-width:24px;min-height:24px;margin:-3px -7px -3px -3px;border-radius:4px}
 .note{font-size:13px;color:var(--muted)}
 /* odontogram */
 .odo{overflow-x:auto;margin:10px 0 4px;padding-bottom:4px}
@@ -694,19 +694,21 @@ const LS={
   keys(pre){const out=[];try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('opisyNFZ.'+pre))out.push(k.slice(9));}}catch(e){}return out;}
 };
 const PRICE_DEF=1.84, REV_DEF=350, PCT_OPTS=[40,35], SLOT_MIN=30;
+function cfgApply(d,c){                               // przepisuje poprawne pola ustawień z c do d (wczytanie z pamięci przeglądarki albo z innej karty)
+  if(c.price>0&&c.price<100)d.price=+c.price;
+  if(PCT_OPTS.includes(+c.pct))d.pct=+c.pct;
+  if(c.rev>0&&c.rev<100000)d.rev=+c.rev;
+  d.basis=c.basis==='share'?'share':'full';
+  d.auto=c.auto===true;
+  if(Number.isInteger(c.seq)&&c.seq>(d.seq||0))d.seq=c.seq;                    // licznik numerów wpisów nigdy się nie cofa
+  if(typeof c.lastBackup==='string'&&(!d.lastBackup||c.lastBackup>d.lastBackup))d.lastBackup=c.lastBackup;
+  if(typeof c.lastChange==='string'&&(!d.lastChange||c.lastChange>d.lastChange))d.lastChange=c.lastChange;
+}
 const cfg=(()=>{
   const d={v:2,price:PRICE_DEF,pct:40,rev:REV_DEF,basis:'full',auto:false,seq:0,lastBackup:null,lastChange:null};
   const c=LS.get('cfg',null);
-  if(c&&typeof c==='object'){
-    if(c.price>0&&c.price<100)d.price=+c.price;
-    if(PCT_OPTS.includes(+c.pct))d.pct=+c.pct;
-    if(c.rev>0&&c.rev<100000)d.rev=+c.rev;
-    if(c.basis==='share')d.basis='share';
-    d.auto=c.auto===true;
-    if(Number.isInteger(c.seq)&&c.seq>0)d.seq=c.seq;
-    if(typeof c.lastBackup==='string')d.lastBackup=c.lastBackup;
-    if(typeof c.lastChange==='string')d.lastChange=c.lastChange;
-  }else{
+  if(c&&typeof c==='object')cfgApply(d,c);
+  else{
     // pierwsze uruchomienie tej wersji: stawka 1,84 zł/pkt (poprzednio 1,81 zł w kluczu „price”); wybrany % lekarza zostaje
     const p=+LS.get('pct',40);if(PCT_OPTS.includes(p))d.pct=p;
     LS.set('cfg',d);LS.del('price');LS.del('pct');
@@ -825,7 +827,7 @@ function normMeta(x){
     src:x.src==='man'?'man':'gen',
     codes:Array.isArray(x.codes)?x.codes.filter(c=>typeof c==='string'&&/^[A-Za-z0-9.]{1,10}$/.test(c)).slice(0,40):[],
     pts:r2(n(x.pts,0,0,1e6)),price:n(x.price,cfg.price,0.0001,99.9999),pct:n(x.pct,cfg.pct,0,100),
-    revH:r2(n(x.revH,0,0,1000)),revRate:n(x.revRate,cfg.rev,0,1e5),
+    revH:r2(n(x.revH,0,0,24)),revRate:n(x.revRate,cfg.rev,0,1e5),
     ex:Array.isArray(x.ex)?x.ex.map(e=>({c:Math.round(n(e&&e.c,0,0,1e10)),d:String(e&&e.d!=null?e.d:'').replace(/[\u0000-\u001f]/g,' ').slice(0,120)})).filter(e=>e.c>0).slice(0,30):[],
     min:(x.min===null||x.min===undefined||x.min==='')?null:(isFinite(+x.min)&&+x.min>=0&&+x.min<=1440?Math.round(+x.min):null),
     miss:Number.isInteger(x.miss)&&x.miss>0?x.miss:0,body:x.body===true};
@@ -838,7 +840,8 @@ function calc(m){                                   // kwoty wpisu w groszach
 const isVisit=m=>m.src==='gen'||m.pts>0||!!m.ini||m.min>0;         // wpis z samymi przeglądami / kwotami dodatkowymi nie jest wizytą pacjenta
 const whoOf=m=>m.ini||('Anonim #'+m.no);
 function dbList(){if(DB._lv!==DB.ver){DB._l=[...DB.visits.values()].sort((a,b)=>b.date.localeCompare(a.date)||String(b.created).localeCompare(String(a.created))||b.no-a.no);DB._lv=DB.ver;}return DB._l;}
-function nextNo(){let mx=cfg.seq||0;DB.visits.forEach(v=>{if(v.no>mx)mx=v.no;});cfg.seq=mx+1;cfgSave();return cfg.seq;}
+function nextNo(){let mx=cfg.seq||0;const st=LS.get('cfg',null);if(st&&Number.isInteger(st.seq)&&st.seq>mx)mx=st.seq;      // licznik mogła przesunąć inna karta
+  DB.visits.forEach(v=>{if(v.no>mx)mx=v.no;});cfg.seq=mx+1;cfgSave();return cfg.seq;}
 function newId(){return 'v'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function touchData(){cfg.lastChange=new Date().toISOString();cfgSave();}
 function cacheBody(id,b){DB.bodies.delete(id);DB.bodies.set(id,b);if(DB.bodies.size>300)DB.bodies.delete(DB.bodies.keys().next().value);}
@@ -1113,9 +1116,14 @@ function resetVisit(){
 function cleanSnap(sn){                              // odczyt zapisanych odpowiedzi (także z wczytanej kopii) – tylko poprawne struktury
   const o={codes:[],a:{},teeth:{},quads:{},plan:null};if(!sn||typeof sn!=='object')return o;
   o.codes=(Array.isArray(sn.codes)?sn.codes:[]).filter((c,i,a)=>typeof c==='string'&&D[c]&&a.indexOf(c)===i);
-  if(sn.a&&typeof sn.a==='object'&&!Array.isArray(sn.a))o.a=sn.a;
+  // dozwolone wartości odpowiedzi: tekst, liczba, lista tekstów (pola wielokrotnego wyboru) albo lista wierszy (np. kanały przy 1206)
+  const okVal=(v,deep)=>typeof v==='string'?v.slice(0,4000):(typeof v==='number'&&isFinite(v))?String(v)
+    :Array.isArray(v)?(deep&&v.some(x=>x&&typeof x==='object'&&!Array.isArray(x))?v.slice(0,40).map(x=>okObj(x,false)):v.filter(x=>typeof x==='string').slice(0,80).map(x=>x.slice(0,400))):undefined;
+  const okObj=(src,deep)=>{const out={};if(src&&typeof src==='object'&&!Array.isArray(src))Object.keys(src).forEach(k=>{if(k.length>60||k==='__proto__'||k==='constructor'||k==='prototype')return;
+    const v=okVal(src[k],deep);if(v!==undefined)out[k]=v;});return out;};
+  o.a=okObj(sn.a,true);
   if(sn.teeth&&typeof sn.teeth==='object')Object.keys(sn.teeth).forEach(c=>{const t=sn.teeth[c];if(!D[c]||!t||typeof t!=='object')return;o.teeth[c]={};
-    Object.keys(t).forEach(n=>{if(!/^\d{2}$/.test(n))return;const x=t[n]||{};o.teeth[c][n]={s:Array.isArray(x.s)?x.s.filter(s=>SORD.includes(s)):[],f:x.f&&typeof x.f==='object'?x.f:{}};});});
+    Object.keys(t).forEach(n=>{if(!/^\d{2}$/.test(n))return;const x=t[n]||{};o.teeth[c][n]={s:Array.isArray(x.s)?x.s.filter(s=>SORD.includes(s)):[],f:okObj(x.f,false)};});});
   if(sn.quads&&typeof sn.quads==='object')Object.keys(sn.quads).forEach(c=>{if(D[c]&&Array.isArray(sn.quads[c]))o.quads[c]=sn.quads[c].filter((q,i,a)=>[1,2,3,4].includes(q)&&a.indexOf(q)===i);});
   if(sn.plan&&PLANS[sn.plan.p]&&PLANS[sn.plan.p].v[sn.plan.w])o.plan={p:sn.plan.p,w:sn.plan.w};
   return o;
@@ -1220,8 +1228,8 @@ function histHay(m){return ((m.ini||'ANONIM')+' #'+m.no+' '+fmtDate(m.date)+' '+
 function entryCard(m){
   if(ui.edit&&ui.edit.id===m.id)return `<section class="card hist editing" id="hist-${esc(m.id)}"><h2><span class="tnum${m.ini?'':' anon'}">${esc(m.ini||'Anonim')}</span><span class="hno">#${m.no}</span>Edycja wpisu</h2>${entryFormHTML('e')}</section>`;
   const k=calc(m),chips=[];
-  if(m.pts>0)chips.push(`<span class="pts"><i class="dot s-pe"></i>${fmtP(m.pts)} pkt · ${fmtC(k.pc)} · lekarz ${fmtP(m.pct)}%: ${fmtC(k.sh)}</span>`);
-  if(k.rv)chips.push(`<span class="pts"><i class="dot s-rv"></i>przeglądy ${fmtH(m.revH)} · ${fmtC(k.rv)}</span>`);
+  if(m.pts>0)chips.push(`<span class="pts"><i class="dot s-pe"></i>${fmtP(m.pts)} pkt${m.price!==cfg.price?` × ${num(m.price)} zł`:''} · ${fmtC(k.pc)} · lekarz ${fmtP(m.pct)}%: ${fmtC(k.sh)}</span>`);   // stawka widoczna, gdy inna niż aktualna
+  if(k.rv)chips.push(`<span class="pts"><i class="dot s-rv"></i>przeglądy ${fmtH(m.revH)}${m.revRate!==cfg.rev?` × ${num(m.revRate)} zł`:''} · ${fmtC(k.rv)}</span>`);
   m.ex.forEach(e=>chips.push(`<span class="pts"><i class="dot s-ex"></i>${esc(e.d||'dodatkowy zarobek')} · ${fmtC(e.c)}</span>`));
   if(m.min!=null)chips.push(`<span class="pts plain">${fmtMin(m.min)}</span>`);
   const sub=m.codes.length?esc(m.codes.join(' · ')):(isVisit(m)?'szybki wpis – bez opisu':'bez wizyty – przeglądy / kwoty dodatkowe');
@@ -1504,7 +1512,7 @@ function renderSettings(){
    <section class="card"><h2>Kopia zapasowa i przenoszenie danych</h2>${storeNotes()}
     <div class="row" style="margin:6px 0"><button type="button" class="btn" data-act="bkexport" ${n?'':'disabled'}>Pobierz kopię zapasową (.json)</button><button type="button" class="btn ghost" data-act="bkpick">Wczytaj kopię zapasową…</button><input type="file" id="bk-file" accept=".json,application/json" hidden></div>
     ${ui.msg?`<div class="warn" role="status">${esc(ui.msg)}</div>`:''}
-    <p class="note" style="margin:8px 0 0">Kopia zawiera wszystkie wpisy, opisy i ustawienia. Wczytanie kopii niczego nie kasuje – dodaje brakujące wpisy, a istniejące zastępuje tylko nowszą wersją; tak samo przeniesiesz dane na inny komputer lub telefon.</p>
+    <p class="note" style="margin:8px 0 0">Kopia zawiera wszystkie wpisy, opisy i ustawienia – przechowuj ją tak jak dokumentację. Wczytanie kopii niczego nie kasuje: dodaje brakujące wpisy, a istniejące zastępuje tylko nowszą wersją (wpis usunięty tutaj wróci, jeśli jest w pliku). Tak samo przeniesiesz dane na inny komputer lub telefon.</p>
     <table class="sum" style="margin-top:10px"><tbody>
      <tr><td>Zapisane wpisy</td><td class="m">${n}${DB.migrated?` (w tym ${DB.migrated} przeniesione z poprzedniej wersji)`:''}</td></tr>
      <tr><td>Ostatnia kopia zapasowa</td><td class="m">${lb?fmtDate(lb.slice(0,10))+' '+new Date(lb).toTimeString().slice(0,5):'jeszcze nie wykonano'}</td></tr>
@@ -1669,6 +1677,15 @@ function renderStep3(){
 }
 function prefetchBodies(){if(!DB.ready)return;document.querySelectorAll('[data-act="hcopy"]').forEach(b=>{const id=b.dataset.id;if(!DB.bodies.has(id))dbBody(id).catch(()=>{});});}
 function render(){
+  try{renderView();}
+  catch(e){                                             // błąd w widoku nie może zostawić strony odświeżonej w połowie
+    if(window.console)console.error(e);
+    try{renderSteps();}catch(_){}
+    $('#main').innerHTML=`<section class="card"><div class="err" role="alert">Nie udało się wyświetlić tego widoku (${esc(String(e&&e.message||e))}). Zapisane wizyty są bezpieczne.</div><div class="row" style="margin-top:10px"><button type="button" class="btn" data-act="crashreset">Wyczyść formularz i wróć do początku</button></div></section>`;
+    try{renderBar();}catch(_){$('#bar').innerHTML='';}
+  }
+}
+function renderView(){
   tipHide();
   if(state.step===3)autoSave();
   renderSteps();
@@ -1693,7 +1710,7 @@ function addCodes(txt){
   const toks=(txt.toUpperCase().replace(/\b23\.(\d{4})\b/g,'$1').match(/[A-Z]*\d+[A-Z]?/g)||[]);state.unknown=[];   // kod można wpisać także jako 23.1101
   toks.forEach(t=>{if(D[t]){if(!has(t))state.codes.push(t);}else if(!state.unknown.includes(t))state.unknown.push(t);});
 }
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2200);}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),Math.min(7000,Math.max(2200,m.length*60)));}   // dłuższy komunikat zostaje dłużej
 async function copyText(s,msg){
   msg=msg||'Skopiowano';
   try{await navigator.clipboard.writeText(s);toast(msg);return;}catch(e){}
@@ -1716,7 +1733,8 @@ async function openEntry(el){
   if(!b||!b.snap){toast('Tego wpisu nie da się otworzyć w generatorze – użyj „Edytuj kwoty”');return;}
   if(state.codes.length&&state.savedId!==id){const r=autoSave();
     if(!(r&&r.ok)&&!arm(el,'Bieżąca wizyta nie jest zapisana – kliknij ponownie, aby ją porzucić',3600))return;}
-  try{loadVisit(m,b.snap);state.loadedTxt=b.txt;}catch(e){resetVisit();render();toast('Nie udało się odczytać zapisanych odpowiedzi');return;}
+  try{loadVisit(m,b.snap);state.loadedTxt=b.txt;renderStep1();renderStep2();renderStep3();}      // próbne zbudowanie widoków: uszkodzone odpowiedzi (np. z błędnego pliku kopii) nie mogą zawiesić strony
+  catch(e){resetVisit();ui.edit=null;state.step=4;render();toast('Tego wpisu nie da się otworzyć – zapisane odpowiedzi są uszkodzone. Opis i kwoty zostały w historii.');return;}
   ui.edit=null;state.step=state.codes.length?3:1;render();window.scrollTo(0,0);
 }
 document.addEventListener('click',e=>{
@@ -1781,6 +1799,7 @@ document.addEventListener('click',e=>{
   if(a==='hexport'){histExport();return;}
   /* statystyki i ustawienia */
   if(a==='range'){ui.range={p:el.dataset.p,from:'',to:''};render();return;}
+  if(a==='crashreset'){resetVisit();ui.edit=null;ui.quick=null;state.step=1;render();return;}
   if(a==='tab'){ui.tab=el.dataset.t;render();return;}
   if(a==='dowm'){ui.dowM=el.dataset.v;render();return;}
   if(a==='bkexport'){backupExport();return;}
@@ -1854,7 +1873,11 @@ document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState!=='visible'){if(state.step===3)autoSave();return;}   // chowana karta: dopisz ostatnie zmiany rozliczenia
   const sig=()=>DB.visits.size+':'+[...DB.visits.values()].reduce((mx,v)=>v.at>mx?v.at:mx,'');
   const before=sig();
-  dbReload().then(()=>{if(sig()===before)return;DB.bodies.clear();if(state.step>=4&&!ui.edit)render();else{renderSteps();renderBar();}}).catch(()=>{});
+  dbReload().then(async()=>{if(sig()===before)return;DB.bodies.clear();await dbFixNos();if(state.step>=4&&!ui.edit)render();else{renderSteps();renderBar();}}).catch(()=>{});
+});
+window.addEventListener('storage',e=>{                // ustawienia zmienione w innej karcie tej samej przeglądarki – żeby karty nie nadpisywały sobie stawek
+  if(e.key!=='opisyNFZ.cfg'||!e.newValue)return;
+  try{const c=JSON.parse(e.newValue);if(!c||typeof c!=='object')return;cfgApply(cfg,c);if(DB.ready&&!ui.edit&&!document.hasFocus())render();}catch(_){}
 });
 window.addEventListener('pagehide',()=>{if(DB.ready&&state.step===3)autoSave();});
 render();

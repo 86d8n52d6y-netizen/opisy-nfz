@@ -2,7 +2,7 @@
 
 Plik do wznawiania pracy po przerwie (np. po wyczerpaniu limitu). Aktualizowany po każdym etapie.
 
-## Stan na 2026-11-16 (noc)
+## Stan na 2026-11-16 (rano)
 - `main` = działająca strona na GitHub Pages (commit `e8476e8`, wersja z 17:43) – **bez zmian do czasu scalenia**.
 - Gałąź `porzadek-pracy` = rozbudowa aplikacji według specyfikacji „Ewidencja wizyt, punktów, czasu pracy i zarobków” (6 etapów, niżej).
 - Pliki: `index.html` (UI, logika, wycena `PTS`, zapis wizyt), `szablony.js` (stałe teksty `SEG`), `testy/` (testy w przeglądarce).
@@ -14,7 +14,7 @@ Plik do wznawiania pracy po przerwie (np. po wyczerpaniu limitu). Aktualizowany 
 | 1. Audyt obecnej aplikacji | ✅ zrobione | `2d9ef5e` |
 | 2. Plan zmian | ✅ zrobione | `67da90b` |
 | 3. Wdrożenie | ✅ zrobione (kod w repo; poprawki po testach w etapach 4–5) | `e168554` |
-| 4. Testowanie | ⏳ w toku – część 1 (T0–T5) w repo; zostały T6–T11 | ten commit |
+| 4. Testowanie | ✅ zrobione – 12 plików testów, 256 sprawdzeń, wszystkie OK | `fb535df` (cz. 1), ten commit (cz. 2) |
 | 5. Optymalizacja | – | |
 | 6. Raport końcowy + scalenie do `main` | – | |
 
@@ -105,7 +105,7 @@ Cała logika w `index.html` (z 106 kB do ok. 190 kB), `szablony.js` bez zmian. C
 
 Sprawdzone przed tym commitem: `bash sprawdz.sh`, `testy/t0_dym.py` (9/9), `testy/t1_obliczenia.py` (25/25). Pełne testy – Etap 4.
 
-### ETAP 4 – Testowanie (w toku)
+### ETAP 4 – Testowanie
 
 Testy działają na prawdziwej aplikacji w przeglądarce Chrome (bez okna): klikają i wpisują jak użytkownik, a wyniki porównują
 z niezależnym liczeniem w Pythonie (ułamki dziesiętne `Decimal`, kalendarz `datetime`). Uruchomienie: `bash testy/uruchom.sh`.
@@ -118,13 +118,39 @@ z niezależnym liczeniem w Pythonie (ułamki dziesiętne `Decimal`, kalendarz `d
 | `t3_czas.py` | zasada +10 min (1 ząb, kilka zębów, kilka procedur – zawsze raz), które kody ją wywołują, limity NFZ, czas ręczny, zapis czasu we wpisie | 23/23 |
 | `t4_wpisy.py` | szybki wpis (punkty / przeglądy / kwota), 10 rodzajów błędnych danych, edycja kwot i stawek wpisu, anulowanie, usuwanie, wyszukiwanie, sumy po każdej zmianie | 27/27 |
 | `t5_statystyki.py` | 1060 wpisów z 13 miesięcy: kafelki i wszystkie tabele (Dni, Tygodnie, Miesiące, Dni tygodnia) dla 11 zakresów i obu podstaw; suma dni = tygodni = miesięcy; wpisy anonimowe; edycja i usunięcie; wykresy | 27/27 |
-| T6–T11 | migracja starej historii, kopia zapasowa, awaria magazynu danych, zgodność opisów ze starą wersją, bezpieczeństwo wczytywanej kopii, wygląd (telefon), wydajność | do zrobienia |
+| `t6_migracja.py` | przeniesienie historii z wersji z `main` (prawdziwa stara wersja w tej samej przeglądarce): wpisy ze stawkami 1,81 / 1,90 zł i 40 / 35%, wpis bez treści opisu, uszkodzony indeks; teksty opisów co do znaku, kwoty co do grosza, numery, stare klucze kasowane dopiero po sprawdzeniu, „Otwórz i popraw”, przeliczenie po nowych stawkach | 17/17 |
+| `t7_kopia.py` | pobranie kopii .json, utrata danych → odtworzenie 1:1, ponowne wczytanie bez dubli, starsza kopia nie cofa nowszej poprawki, nowe urządzenie (wpisy + ustawienia), zderzenie numerów, pliki uszkodzone / obce / częściowo błędne, opisy do .txt | 18/18 |
+| `t8_magazyn.py` | brak IndexedDB → pamięć zapasowa (localStorage) i powrót do głównej bazy bez dubli; baza, która nie odpowiada; cała pamięć zablokowana; błąd zapisu (brak miejsca) z ponowieniem; dwie karty naraz (wpisy, numery, stawki) | 19/19 |
+| `t9_regresja.py` | 684 scenariusze (każdy kod × 10 wariantów wieku, 8 planów wizyt, 400 losowych zestawów z wypełnianiem pól i diagramu zębów): opis, punkty, błędy NFZ i liczba braków identyczne jak w wersji z `main` (5,2 mln znaków); różnią się tylko komunikaty o czasie wizyty (nowa zasada +10 min) | 14/14 |
+| `t10_bezpieczenstwo.py` | plik kopii z kodem HTML/JS w każdym polu (inicjały, opisy, 61 pól formularza, kody, zęby, ustawienia) – w 17 widokach nic się nie wykonuje; wpis z uszkodzonymi odpowiedziami nie zawiesza strony | 17/17 |
+| `t11_wyglad_wydajnosc.py` | 5000 wpisów (czasy niżej); wygląd: telefon 320 i 390 px, tablet, komputer, jasny i ciemny motyw – nic nie wystaje poza ekran, przyciski ≥ 24 px; zrzuty ekranu w `testy/zrzuty/` (poza repo) | 22/22 |
+
+**Wydajność przy 5000 wpisów (T11):**
+
+| Czynność | Czas |
+|---|---|
+| Uruchomienie aplikacji | 0,5 s |
+| Historia (40 najnowszych) / wyszukiwanie | 40 ms / 17 ms |
+| Statystyki „Wszystko”, zakładka Dni (725 dni) / „Ten miesiąc” | 290 ms / 11 ms |
+| Szybki wpis (od Enter do zapisu) | 53 ms |
+| Kopia zapasowa (plik 4,8 MB) / wczytanie na pustym urządzeniu | 0,24 s / 0,5 s |
+| Zajętość bazy przeglądarki | ok. 2,5 MB |
 
 **Poprawki wprowadzone w trakcie testów (część 1):**
 1. Zasada +10 min liczona od czasu wizyty (30 → 40 min), a nie od czasu pakietu z opisu (było 21 + 10 = 31 min).
 2. Statystyki, pola „Od–Do”: zmieniane pole wygrywa, drugie się dopasowuje (wcześniej daty zamieniały się miejscami i zakres wychodził inny niż wpisany).
 3. Dni kalendarzowe w zakresie sięgającym w przyszłość liczone do ostatniego wpisu (nie tylko do dziś).
 4. Skrypt `testy/uruchom.sh` bez argumentów uruchamia wszystkie testy.
+
+**Poprawki wprowadzone w trakcie testów (część 2):**
+1. Historia: gdy wpis ma inną stawkę niż obecna, widać ją przy kwocie („286,8 pkt × 1,81 zł”) – T6.
+2. Wczytywana kopia: godziny przeglądów w jednym wpisie najwyżej 24 h, tak jak w formularzach (wcześniej plik mógł wnieść do 1000 h) – T7.
+3. Dwie karty przeglądarki: zmiana stawek / trybu zapisu w jednej karcie dociera do drugiej (wcześniej karty mogły nadpisać sobie ustawienia); licznik numerów wpisów nie cofa się; po powrocie do karty zdublowane numery są naprawiane – T8.
+4. „Otwórz i popraw” wpisu z pliku kopii z uszkodzonymi odpowiedziami (np. tekst zamiast listy) zawieszało stronę – teraz odpowiedzi z pliku są czyszczone (tylko tekst, liczby i listy), a wpis, którego nie da się wyświetlić, daje komunikat; opis i kwoty zostają w Historii – T10.
+5. Błąd przy rysowaniu dowolnego widoku pokazuje kartę z komunikatem i przyciskiem „Wyczyść formularz i wróć do początku” zamiast pustej strony – T10.
+6. Dłuższe komunikaty na dole ekranu zostają proporcjonalnie dłużej (2,2–7 s).
+7. Przyciski „usuń”, „brak”, „×” przy kodach mają co najmniej 24 × 24 px (WCAG 2.2, kryterium 2.5.8) – wygodniej na telefonie – T11.
+8. Ustawienia, opis kopii zapasowej: dopisano, że wpis usunięty w aplikacji wróci po wczytaniu kopii, która go zawiera.
 
 ## Zrobione wcześniej
 - [x] Szablony: pacjent poniżej i powyżej 5 r.ż., plany wizyt I–IV
@@ -140,3 +166,4 @@ z niezależnym liczeniem w Pythonie (ułamki dziesiętne `Decimal`, kalendarz `d
 | 2026-11-15 | `porzadek-pracy` | ETAP 2: plan zmian – mapa wymagań i 10 rozstrzygnięć konfliktów z dotychczasowym działaniem |
 | 2026-11-15 | `porzadek-pracy` | ETAP 3: wdrożenie w `index.html` – ewidencja wizyt, dwa tryby zapisu, przeglądy, kwoty dodatkowe, +10 min, statystyki, kopia zapasowa |
 | 2026-11-16 | `porzadek-pracy` | ETAP 4, część 1: testy T0–T5 (149 sprawdzeń, wszystkie OK), 3 poprawki w aplikacji |
+| 2026-11-16 | `porzadek-pracy` | ETAP 4, część 2: testy T6–T11 – razem 12 plików, 256 sprawdzeń, wszystkie OK; 8 poprawek w aplikacji |
