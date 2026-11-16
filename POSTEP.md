@@ -15,8 +15,8 @@ Plik do wznawiania pracy po przerwie (np. po wyczerpaniu limitu). Aktualizowany 
 | 2. Plan zmian | ✅ zrobione | `67da90b` |
 | 3. Wdrożenie | ✅ zrobione (kod w repo; poprawki po testach w etapach 4–5) | `e168554` |
 | 4. Testowanie | ✅ zrobione – 12 plików testów, 256 sprawdzeń, wszystkie OK | `fb535df` (cz. 1), `2db157e` (cz. 2) |
-| 5. Optymalizacja | ✅ zrobione – 3 poprawki po przeglądzie zrzutów ekranu; testy: 264 sprawdzenia, wszystkie OK | ten commit |
-| 6. Raport końcowy + scalenie do `main` | – | |
+| 5. Optymalizacja | ✅ zrobione – 3 poprawki po przeglądzie zrzutów ekranu; testy: 264 sprawdzenia, wszystkie OK | `88d615f` |
+| 6. Raport końcowy + scalenie do `main` | ✅ raport – ten commit; scalenie: po tym commicie (wynik w „Dzienniku”) | ten commit |
 
 Jak wznowić po przerwie: przeczytaj tę tabelę, `git log --oneline -10`, potem kontynuuj pierwszy etap bez ✅.
 Testy: `bash testy/uruchom.sh` (wszystkie) albo `bash testy/uruchom.sh <plik>`; test składni: `bash sprawdz.sh`.
@@ -166,6 +166,52 @@ Rozważone i niewprowadzone: ciągła oś na wykresie dziennym – co 3.–4. s�
 
 Ograniczenie testów: automatyczne testy działają w Chrome. Silnika Safari (WebKit) nie dało się pobrać w tym środowisku (sieć blokuje serwer pobierania), więc zgodność z iPhone'em sprawdziłem tylko przeglądem kodu: brak składni wymagającej nowszego Safari (`?.`, `??`, `.at()`, `Object.hasOwn`, `structuredClone`, `replaceAll`), funkcje pamięci przeglądarki są w blokach z obsługą błędu, a `color-mix` (cień tabeli) w starszej przeglądarce po prostu się nie pokaże.
 
+### ETAP 6 – Raport końcowy
+
+**1. Co jest nowego (względem wersji z `main`, commit `e8476e8`)**
+
+| Specyfikacja | Stan w aplikacji |
+|---|---|
+| 1. Zapis wizyt | Tryb **z inicjałami** (jak dotąd) i **automatyczny / anonimowy** – przełącznik na krokach 1 i 3 oraz w Ustawieniach, pamiętany po restarcie. Wpis: inicjały lub „Anonim”, numer, data, dzień tygodnia, kody, punkty, stawka, kwota, % lekarza, przeglądy, kwoty dodatkowe, czas wizyty, suma. Jedna wizyta = jeden wpis; zapis tylko po zmianie; pytanie zamiast nadpisania, gdy formularz wygląda na innego pacjenta. Edycja kwot, „Otwórz i popraw”, usuwanie; szybki wpis bez opisu |
+| 2. Punkty | 1 pkt = **1,84 zł** (zmiana w Ustawieniach); każdy wpis pamięta swoją stawkę; kwoty w groszach, połówki w górę |
+| 3. Dodatkowe zarobki | Dowolna liczba pozycji „kwota + opis” przy wizycie, w szybkim wpisie i w edycji; osobna kategoria w statystykach |
+| 4. Przeglądy | **350 zł/h**, ułamki godzin (0,5 h = 175 zł), osobno od punktów, edytowalne |
+| 5. +10 min | Pakiet higienizacyjny (ST30, ST30E, ST30G) + ekstrakcja (ST01, ST02) lub leczenie zachowawcze (1105, 1108, 1206, 1502–1505) → +10 min do czasu wizyty, **raz na wizytę** |
+| 6. Statystyki | Zakresy (dziś … wszystko, dowolne od–do), kafelki (w tym średnia na dzień pracy i kalendarzowy), struktura przychodów, zakładki Dni / Tygodnie / Miesiące (zmiana do poprzedniego miesiąca) / Dni tygodnia (najlepszy dzień, średnie, tabela miesiąc × dzień), wykresy |
+| 8. Dane | IndexedDB (awaryjnie localStorage, w ostateczności pamięć karty z ostrzeżeniem); stara historia przenosi się sama; kopia zapasowa .json z odtwarzaniem i scalaniem; przypomnienie o kopii |
+
+**2. Naprawione błędy** – 6 z audytu (nadpisywanie wpisu poprzedniego pacjenta, zbędne zapisy, błąd 1 gr w zaokrągleniach, kod „23.1101”, pojemność ≈ 1100 wizyt, brak kopii danych liczbowych) oraz 14 znalezionych w testach i przeglądzie wyglądu (lista w ETAPACH 4 i 5).
+
+**3. Wyniki testów** – `bash testy/uruchom.sh`, Chrome bez okna, 16.11.2026: **12 plików, 264 sprawdzenia, 0 błędów** (T0 9, T1 25, T2 38, T3 23, T4 27, T5 35, T6 17, T7 18, T8 19, T9 14, T10 17, T11 22).
+
+**4. Ograniczenia techniczne**
+- Dane są tylko w tej przeglądarce na tym urządzeniu; nic nie synchronizuje się samo (przenoszenie = kopia .json).
+- Safari usuwa IndexedDB i localStorage strony po 7 dniach używania Safari bez wejścia na tę stronę; aplikacja dodana do ekranu początkowego ma własny licznik dni (źródło: WebKit, „Full Third-Party Cookie Blocking and More”, 2020). Prośba o trwałe przechowywanie (`navigator.storage.persist`) bywa w Safari odrzucana (WebKit, zgłoszenie 271401) – stąd przypomnienie o kopii.
+- Wczytanie kopii scala dane: wpis usunięty w aplikacji wróci, jeśli jest w pliku.
+- Przeniesienie starej historii jest jednokierunkowe: po pierwszym otwarciu nowej wersji wersja z `e8476e8` (gdyby ją przywrócić) nie pokaże historii – dane są w nowej bazie.
+- Wpisy przeniesione ze starej wersji nie mają czasu wizyty – kafelek „Czas wizyt” pokazuje ich liczbę („N wizyt bez wpisanego czasu”); czas uzupełnia się (30 min) przy „Otwórz i popraw”.
+- Testy automatyczne tylko w Chrome (silnik Safari niedostępny w środowisku testowym) – zgodność z Safari sprawdzona przeglądem kodu.
+- Kopia aplikacji w Claude (artefakt) to inna domena – ma osobne dane.
+
+**5. Założenia do potwierdzenia** (każde da się zmienić bez utraty danych)
+
+| # | Założenie | Gdzie zmienić |
+|---|---|---|
+| 1 | +10 min doliczane do czasu wizyty (30 → 40 min), raz na wizytę; wywołują je ekstrakcje ST01, ST02 i 1105, 1108, 1206, 1502–1505; nie wywołują 1101, 1006, ST19, ST04, ST26 | kod (`HYG_EXTRA`) |
+| 2 | Nowe wpisy po 1,84 zł; wpisy sprzed zmiany zostają po 1,81 zł | „Przelicz po aktualnych stawkach” przy wpisie |
+| 3 | „Zarobek z punktów” w statystykach domyślnie = pełna wartość punktów | przełącznik w Statystykach / Ustawieniach |
+| 4 | Wpis z samymi przeglądami lub kwotą dodatkową nie jest wizytą (liczy się do zarobku i dni pracy) | kod (`isVisit`) |
+| 5 | Szybki wpis wizyty bez wpisanego czasu = 30 min | pole „Czas wizyty” |
+| 6 | Tydzień = poniedziałek–niedziela (ISO); dzień przepracowany = dzień z co najmniej jednym wpisem | kod |
+
+**6. Propozycje (niewdrożone – czekają na decyzję)**
+
+| Propozycja | Uzasadnienie | Nakład |
+|---|---|---|
+| Pole „gabinet” przy wpisie: własny % lekarza dla gabinetu, statystyki i zestawienie miesięczne per gabinet | przy pracy w kilku miejscach z różnym udziałem przełącznik 40/35% jest dziś wspólny dla wszystkich wpisów – łatwo zapisać wizytę z niewłaściwym %; zestawienie per gabinet ułatwia sprawdzenie rozliczenia | średni |
+| Instalacja na ekranie początkowym (manifest + praca bez internetu, czcionki w repo zamiast z Google Fonts) | na iPhonie aplikacja z ekranu początkowego nie podlega 7-dniowemu licznikowi Safari, tylko własnemu; działa bez sieci w gabinecie | mały–średni (do sprawdzenia na Twoim iPhonie: przeniesienie danych kopią .json) |
+| Eksport zestawienia (miesiące / dni) do pliku CSV dla Excela | rozliczenie z gabinetem lub księgowość bez przepisywania; kopia .json nie jest do czytania w Excelu | mały |
+
 ## Zrobione wcześniej
 - [x] Szablony: pacjent poniżej i powyżej 5 r.ż., plany wizyt I–IV
 - [x] Wycena punktowa (zarz. 95/2026/DSOZ, 44/2025/DSOZ), kwota i udział lekarza 40%/35%
@@ -182,3 +228,4 @@ Ograniczenie testów: automatyczne testy działają w Chrome. Silnika Safari (We
 | 2026-11-16 | `porzadek-pracy` | ETAP 4, część 1: testy T0–T5 (149 sprawdzeń, wszystkie OK), 3 poprawki w aplikacji |
 | 2026-11-16 | `porzadek-pracy` | ETAP 4, część 2: testy T6–T11 – razem 12 plików, 256 sprawdzeń, wszystkie OK; 8 poprawek w aplikacji |
 | 2026-11-16 | `porzadek-pracy` | ETAP 5: ciągła oś wykresów tygodniowego i miesięcznego, kolejność kolumn tabel, przyklejona kolumna i cień przewijania; testy: 264 sprawdzenia, wszystkie OK |
+| 2026-11-16 | `porzadek-pracy` | ETAP 6: raport końcowy (zmiany, błędy, testy, ograniczenia, założenia, propozycje) |
