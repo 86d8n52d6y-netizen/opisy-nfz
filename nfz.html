@@ -158,6 +158,12 @@ table.sum .sub-n{display:block;font-family:var(--font-body);font-size:12px;color
 @media (max-width:760px){.plan-row{grid-template-columns:1fr}.plan-btns{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .copyall{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--r);padding:14px 16px;margin-bottom:14px}
 .copyall p{margin:0;font-size:14px}
+.crow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:5px 0;border-bottom:1px solid var(--line)}.crow .cn{flex:1 1 140px;min-width:0;font-size:14px;overflow-wrap:anywhere}.crow.hid{opacity:.55}
+#segQ{min-height:40px;box-sizing:border-box;padding:8px 10px;font:inherit;border:1px solid var(--line);border-radius:8px}
+.mini.star{color:var(--line);font-size:16px}.mini.star[aria-pressed="true"]{color:#e0a100;border-color:#e0a100}
+.zrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}.zrow input{flex:1;min-width:160px}
+.plan-btns.sets{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.edtxt{width:100%;min-height:340px;font:inherit;font-size:14.5px;line-height:1.5;padding:12px;border:1px solid var(--line);border-radius:var(--r);box-sizing:border-box;resize:vertical}
 .btn.big{font-size:16px;padding:12px 22px}
 .out.all{max-height:440px}
 .toast{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
@@ -282,7 +288,7 @@ G.bar('nfz');
 
 /* ---------- stan ---------- */
 const state = { step:1, codes:[], a:{}, teeth:{}, quads:{}, unknown:[], plan:null, back:1,
-  savedId:null, savedNo:null, savedCreated:null, savedSig:null, pendSig:null, saveInfo:null, skipSave:false, iniOk:null, diffOk:null, link:null, loadedTxt:null,
+  savedId:null, savedNo:null, savedCreated:null, savedSig:null, pendSig:null, saveInfo:null, skipSave:false, iniOk:null, diffOk:null, link:null, loadedTxt:null, ed:null,
   vPrice:null, vPct:null, vRev:null };
 function initDefaults(){ state.a['ST30.czas']='21'; state.a['ST30G.czas']='21'; state.a['ST30E.czas']='11'; state.a['ST01.wer']='nowy'; state.a['ST02.wer']='nowy'; state.a['1206.canals']=[{}]; }
 initDefaults();
@@ -717,9 +723,15 @@ function cfgApply(d,c){                               // przepisuje poprawne pol
   if(Number.isInteger(c.seq)&&c.seq>(d.seq||0))d.seq=c.seq;                    // licznik numerów wpisów nigdy się nie cofa
   if(typeof c.lastBackup==='string'&&(!d.lastBackup||c.lastBackup>d.lastBackup))d.lastBackup=c.lastBackup;
   if(typeof c.lastChange==='string'&&(!d.lastChange||c.lastChange>d.lastChange))d.lastChange=c.lastChange;
+  const okC=x=>typeof x==='string'&&Object.prototype.hasOwnProperty.call(D,x);   // ulubione, ukryte kody i własne zestawy – bez danych pacjentów
+  if(Array.isArray(c.fav))d.fav=[...new Set(c.fav.filter(okC))].slice(0,60);
+  if(Array.isArray(c.hid))d.hid=[...new Set(c.hid.filter(okC))].slice(0,80);
+  if(Array.isArray(c.sets))d.sets=c.sets.filter(z=>z&&typeof z.id==='string'&&typeof z.name==='string'&&Array.isArray(z.codes))
+    .map(z=>({id:z.id.replace(/[^a-z0-9]/gi,'').slice(0,24),name:z.name.replace(/[<>\u0000-\u001f]/g,'').trim().slice(0,60),codes:[...new Set(z.codes.filter(okC))].slice(0,30),fav:z.fav===true}))
+    .filter(z=>z.id&&z.name&&z.codes.length).slice(0,60);
 }
 const cfg=(()=>{
-  const d={v:2,price:PRICE_DEF,pct:40,rev:REV_DEF,basis:'full',auto:false,seq:0,lastBackup:null,lastChange:null};
+  const d={v:2,price:PRICE_DEF,pct:40,rev:REV_DEF,basis:'full',auto:false,seq:0,lastBackup:null,lastChange:null,fav:[],hid:[],sets:[]};
   const c=LS.get('cfg',null);
   if(c&&typeof c==='object')cfgApply(d,c);
   else{
@@ -730,7 +742,7 @@ const cfg=(()=>{
   return d;
 })();
 function cfgSave(){return LS.set('cfg',cfg);}
-const ui={q:'',lim:40,edit:null,quick:null,busy:false,range:{p:'month',from:'',to:''},tab:'days',dowM:'avg',tips:{},msg:''};
+const ui={cust:false,q:'',lim:40,edit:null,quick:null,busy:false,range:{p:'month',from:'',to:''},tab:'days',dowM:'avg',tips:{},msg:''};
 
 /* ---------- liczby i kwoty ----------
    Kwoty liczone są na groszach (liczby całkowite), żeby zaokrąglenie do 2 miejsc było zawsze „połówki w górę”
@@ -872,10 +884,11 @@ async function dbInit(){
   if(be.kind==='idb'){try{await drainLS2(be);}catch(e){}}
   await dbReload();
   await dbFixNos();
+  try{const so=await G.store('kv').get('nfz:seg');if(so&&so.over&&typeof so.over==='object'){SEGU={over:so.over,hist:so.hist||{}};segApply();}}catch(e){DB.note=(DB.note?DB.note+'; ':'')+'nie udało się odczytać Twoich wersji stałych tekstów';}
   DB.ready=true;
   storageInfo();
   await refreshGab();
-  if(await draftRestore().catch(()=>false))render();
+  await draftRestore().catch(()=>false);render();
   sumsPublish();
 }
 /* ---------- połączenie z resztą aplikacji: gabinet wizyty, sumy dzienne, szkic ---------- */
@@ -894,7 +907,7 @@ function sumsPublish(){                               // data → gabinet → li
   return G.sums.put('nfz',map).catch(()=>{});
 }
 let draftT=null;
-function draftData(){return state.codes.length?{v:1,step:state.step,back:state.back,snap:visitSnap(),savedId:state.savedId,savedNo:state.savedNo,savedCreated:state.savedCreated,link:state.link}:null;}
+function draftData(){return state.codes.length?{v:1,step:state.step,back:state.back,snap:visitSnap(),savedId:state.savedId,savedNo:state.savedNo,savedCreated:state.savedCreated,link:state.link,ed:state.ed||null}:null;}
 function draftSched(){if(!DB.ready)return;clearTimeout(draftT);draftT=setTimeout(draftSaveNow,400);}
 function draftSaveNow(){clearTimeout(draftT);if(!DB.ready)return;const d=draftData();return d?G.draft.save('nfz',d):G.draft.clear('nfz');}
 async function draftRestore(){                        // po powrocie z innego modułu lub po blokadzie – ta sama, niezamknięta wizyta
@@ -908,6 +921,7 @@ async function draftRestore(){                        // po powrocie z innego mo
   state.savedId=m?m.id:null;state.savedNo=m?m.no:null;state.savedCreated=m?m.created:null;state.savedSig=null;state.pendSig=null;state.saveInfo=null;
   state.skipSave=false;state.iniOk=null;state.diffOk=null;state.link=m&&d.link?d.link:null;state.loadedTxt=null;
   if(m){state.vPrice=m.price;state.vPct=m.pct;state.vRev=m.revRate;try{const b=await dbBody(m.id);state.loadedTxt=b?b.txt:null;}catch(e){}}
+  state.ed=d.ed&&typeof d.ed.txt==='string'?{txt:d.ed.txt,gen:String(d.ed.gen||'')}:null;
   state.step=[1,2,3].includes(d.step)?d.step:1;state.back=d.back||1;
   return true;
 }
@@ -1000,7 +1014,20 @@ function askPersist(){                               // prośba do przeglądarki
 /* Stałe fragmenty szablonów (SEG) zapisują się raz, pod kluczem ze skrótu treści, a wpis trzyma do nich odnośniki.
    Opis zajmuje dzięki temu ok. 4× mniej miejsca (także w kopii zapasowej), a zapisany tekst nie zmieni się po późniejszej edycji szablonów. */
 function hashStr(t){let h=0x811c9dc5;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,0x01000193);}return (h>>>0).toString(36)+'_'+t.length.toString(36);}
-const SEG_PACK=Object.keys(SEG).filter(k=>typeof SEG[k]==='string'&&SEG[k].length>=120).sort((a,b)=>SEG[b].length-SEG[a].length).map(k=>({v:SEG[k],h:hashStr(SEG[k])}));
+const SEG0=Object.assign({},SEG);                      // teksty domyślne z szablony.js; wersje użytkownika – SEGU (zaszyfrowane)
+let SEGU={over:{},hist:{}};
+let SEG_PACK=Object.keys(SEG).filter(k=>typeof SEG[k]==='string'&&SEG[k].length>=120).sort((a,b)=>SEG[b].length-SEG[a].length).map(k=>({v:SEG[k],h:hashStr(SEG[k])}));
+function segApply(){
+  Object.keys(SEG0).forEach(k=>{const o=SEGU.over[k];SEG[k]=o&&typeof o.txt==='string'?o.txt:SEG0[k];});
+  SEG_PACK=Object.keys(SEG).filter(k=>typeof SEG[k]==='string'&&SEG[k].length>=120).sort((a,b)=>SEG[b].length-SEG[a].length).map(k=>({v:SEG[k],h:hashStr(SEG[k])}));
+}
+const segVer=k=>SEGU.over[k]?SEGU.over[k].ver:1;
+function segSet(k,txt){                                 // nowa wersja stałego tekstu; poprzednia do historii
+  const cur=SEGU.over[k],h=SEGU.hist[k]||(SEGU.hist[k]=[]);
+  h.push({ver:segVer(k),at:cur?cur.at:null,txt:SEG[k]});if(h.length>30)h.splice(0,h.length-30);
+  SEGU.over[k]={txt:String(txt),ver:segVer(k)+1,at:new Date().toISOString()};segApply();
+  return G.store('kv').put('nfz:seg',SEGU);
+}
 function unpackTxt(t){return t.replace(/\u0003([0-9a-z_]+)\u0004/g,(m,h)=>DB.segs.has(h)?DB.segs.get(h):'[BRAK FRAGMENTU SZABLONU]');}
 function packTxt(txt){
   if(/[\u0003\u0004]/.test(txt))return {txt,p:0,segs:[]};
@@ -1120,10 +1147,10 @@ function autoSave(force){
   state.a['sv.date']=date;                                         // data wizyty przypięta przy pierwszym zapisie
   if(!state.savedId){state.savedId=newId();state.savedNo=nextNo();state.savedCreated=now;}
   const id=state.savedId;
-  const pk=packTxt(buildOut().map(o=>plain(o.text)).join('\n\n')),snap=visitSnap();
+  const pk=packTxt(fullTxt()),snap=visitSnap(),ed=!!state.ed;
   const meta=normMeta({id,no:state.savedNo,ini,date,created:state.savedCreated||now,at:now,src:'gen',codes:state.codes.slice(),pts:P.total,price:vPrice(),pct:vPct(),
-    revH:visitRevH(),revRate:vRev(),ex:visitExtras(),min:vt.val,miss:missCount(),body:true,gab:visitGab()});
-  const sig=JSON.stringify([Object.assign({},meta,{at:''}),pk.txt,snap]);
+    revH:visitRevH(),revRate:vRev(),ex:visitExtras(),min:vt.val,miss:ed?edMiss():missCount(),body:true,gab:visitGab()});
+  const sig=JSON.stringify([Object.assign({},meta,{at:''}),pk.txt,snap,ed]);
   if(prev&&sig===state.savedSig){state.saveInfo={ok:true,meta:prev};return state.saveInfo;}       // nic się nie zmieniło – bez zapisu
   if(prev&&state.loadedTxt!=null){                                   // wpis dopiero co otwarty z historii: jeśli nic się nie różni, nie zapisuj go ponownie
     const same=state.loadedTxt===pk.txt&&JSON.stringify(Object.assign({},meta,{at:''}))===JSON.stringify(Object.assign({},prev,{at:''}));state.loadedTxt=null;
@@ -1131,7 +1158,7 @@ function autoSave(force){
   if(sig===state.pendSig)return state.saveInfo;
   state.pendSig=sig;state.saveInfo={ok:true,pending:true,meta};
   const lk=linkKey();
-  dbPut(meta,{txt:pk.txt,p:pk.p,snap},pk.segs).then(()=>{
+  dbPut(meta,{txt:pk.txt,p:pk.p,snap,ed},pk.segs).then(()=>{
     if(state.savedId===id){if(state.pendSig===sig)state.pendSig=null;state.savedSig=sig;state.link=lk;state.saveInfo={ok:true,meta};}
     refreshSave();
   },e=>{
@@ -1170,7 +1197,7 @@ function linkBanner(){
 function resetVisit(){
   state.step=1;state.plan=null;state.codes=[];state.a={};state.teeth={};state.quads={};state.unknown=[];
   state.savedId=null;state.savedNo=null;state.savedCreated=null;state.savedSig=null;state.pendSig=null;state.saveInfo=null;
-  state.skipSave=false;state.iniOk=null;state.diffOk=null;state.link=null;state.vPrice=null;state.vPct=null;state.vRev=null;state.loadedTxt=null;
+  state.skipSave=false;state.iniOk=null;state.diffOk=null;state.link=null;state.vPrice=null;state.vPct=null;state.vRev=null;state.loadedTxt=null;state.ed=null;
   initDefaults();
 }
 function cleanSnap(sn){                              // odczyt zapisanych odpowiedzi (także z wczytanej kopii) – tylko poprawne struktury
@@ -1197,7 +1224,7 @@ function loadVisit(m,snap){
   state.a['sv.revH']=m.revH?num(m.revH):'';
   state.a['sv.ex']=m.ex.map(e=>({a:num((e.c/100).toFixed(2)).replace(/,00$/,''),d:e.d}));
   state.savedId=m.id;state.savedNo=m.no;state.savedCreated=m.created;state.savedSig=null;state.pendSig=null;state.saveInfo=null;
-  state.skipSave=false;state.loadedTxt=null;state.iniOk=null;state.diffOk=null;state.vPrice=m.price;state.vPct=m.pct;state.vRev=m.revRate;
+  state.skipSave=false;state.loadedTxt=null;state.iniOk=null;state.diffOk=null;state.vPrice=m.price;state.vPct=m.pct;state.vRev=m.revRate;state.ed=null;
   state.a['sv.min']='';const sug=visitTime().sug;if(m.min!=null&&m.min!==sug)state.a['sv.min']=String(m.min);
   state.link=linkKey();
 }
@@ -1581,6 +1608,7 @@ function renderSettings(){
     ${row('Tryb zapisu',switchHTML().replace('<span class="lab">Zapis wizyt w historii</span>',''),cfg.auto?'każda wygenerowana wizyta zapisuje się sama jako wpis anonimowy z numerem':'wizyta zapisuje się po wpisaniu inicjałów pacjenta')}
     ${row('Zarobek z punktów w statystykach','<div class="seg" role="group"><button type="button" data-act="basis" data-v="full" class="'+(cfg.basis==='full'?'on':'')+'" aria-pressed="'+(cfg.basis==='full')+'">pełna wartość punktów</button><button type="button" data-act="basis" data-v="share" class="'+(cfg.basis==='share'?'on':'')+'" aria-pressed="'+(cfg.basis==='share')+'">udział lekarza (%)</button></div>',cfg.basis==='share'?'do sum wchodzi % lekarza zapisany przy wizycie; przeglądy i kwoty dodatkowe w całości':'100 pkt = '+fmtC(centsPts(100,cfg.price))+'; udział lekarza jest pokazywany obok')}
    </section>
+   ${segHTML()}
    <section class="card"><h2>Kopia zapasowa i przenoszenie danych</h2>${storeNotes()}
     <div class="row" style="margin:6px 0"><button type="button" class="btn" data-act="bkexport" ${n?'':'disabled'}>Pobierz kopię zapasową (.json)</button><button type="button" class="btn ghost" data-act="bkpick">Wczytaj kopię zapasową…</button><input type="file" id="bk-file" accept=".json,application/json" hidden></div>
     ${ui.msg?`<div class="warn" role="status">${esc(ui.msg)}</div>`:''}
@@ -1594,6 +1622,18 @@ function renderSettings(){
     </tbody></table></section>`;
 }
 
+function segListHTML(){const q=(ui.segq||'').toLowerCase();
+  const ks=Object.keys(SEG0).filter(k=>!q||k.toLowerCase().includes(q)||String(SEG[k]).toLowerCase().includes(q));
+  return ks.map(k=>`<div class="crow" id="sg-${k}"><span class="code">${k}</span><span class="cn">${esc(String(SEG[k]).split('\n')[0].slice(0,90))}</span>${SEG[k]!==SEG0[k]?`<span class="note">zmieniony · v${segVer(k)}</span>`:segVer(k)>1?`<span class="note">v${segVer(k)}</span>`:''}<button type="button" class="mini" data-act="segedit" data-k="${k}">Edytuj</button></div>`).join('')||'<p class="note">Brak tekstów pasujących do wyszukiwania.</p>';}
+function segHTML(){                                     // edytor stałych tekstów (szablony.js) z wersjami
+  if(ui.seg){const k=ui.seg.k,h=(SEGU.hist[k]||[]).map((x,i)=>[x,i]).reverse();
+    return `<section class="card" id="seg-ed"><h2>Stały tekst <span class="code">${k}</span> <span class="note">wersja ${segVer(k)}${SEG[k]!==SEG0[k]?' · zmieniony':''}</span></h2><p class="note" style="margin-top:0">Zmiana dotyczy nowych opisów. Zapisane wizyty mają tekst z dnia zapisu.</p>
+      <textarea id="segTxt" class="edtxt" aria-label="Treść stałego tekstu ${k}">${esc(ui.seg.txt)}</textarea>
+      <div class="row" style="margin-top:8px"><button type="button" class="btn" data-act="segsave" id="segSave">Zapisz nową wersję</button><button type="button" class="btn ghost" data-act="segcancel">Anuluj</button>${SEG[k]!==SEG0[k]?'<button type="button" class="btn ghost" data-act="segdef" id="segDef">Przywróć tekst domyślny</button>':''}</div>
+      ${h.length?`<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">Poprzednie wersje (${h.length})</summary>${h.map(([x,i])=>`<div class="crow"><span class="code">v${x.ver}</span><span class="cn">${x.at?fmtDate(x.at.slice(0,10))+' '+x.at.slice(11,16):'tekst domyślny'} · ${esc(String(x.txt).split('\n')[0].slice(0,70))}</span><button type="button" class="mini" data-act="segrest" data-h="${i}">Przywróć</button></div>`).join('')}</details>`:''}</section>`;}
+  return `<section class="card"><h2>Stałe teksty opisów</h2><p class="note" style="margin-top:0">Fragmenty z pliku gabinetu (badanie, zalecenia, instruktaż wg wieku…). Edycja tworzy nową wersję tylko na Twoim koncie (zaszyfrowaną); tekst domyślny zawsze można przywrócić. Pola do uzupełnienia (ząb, materiał, API) są w pytaniach – tu tylko stały tekst.</p>
+    <input type="search" id="segQ" data-ui="segq" placeholder="Szukaj w stałych tekstach…" value="${esc(ui.segq||'')}" autocomplete="off" style="width:100%;margin:6px 0"><div id="seglist">${segListHTML()}</div></section>`;
+}
 function ptsExtraCard(){
   if(!state.codes.some(c=>ANES_CODES.includes(c)))return '';
   return `<section class="card" id="card-pts"><h2>Do wyceny: znieczulenia rozliczane osobno</h2><p class="note" style="margin:0 0 10px">Przy wypełnieniach, 1105 i 1206 znieczulenie jest osobnym świadczeniem z zał. 1b (w pakietach ST01, ST02, ST04, ST30 znieczulenie mieści się w pakiecie). Liczba trafia tylko do wyceny punktowej – nie do opisu.</p><div class="grid">${Object.entries(PTS_AN).map(([k,o])=>fieldHTML({k:'pt.an'+k,label:'23.'+k+' '+o.n.replace('Znieczulenie ','').replace('miejscowe ','')+' ('+o.p+' pkt)',type:'num',unit:'×',w:'m',opt:true})).join('')}</div></section>`;
@@ -1690,6 +1730,9 @@ function cardHTML(code){
 /* ---------- wynik ---------- */
 function buildOut(){return state.codes.map(c=>({code:c,text:D[c].render()}));}
 const plain=s=>s.replace(/\u0001([^\u0002]*)\u0002/g,'[UZUPEŁNIJ: $1]');
+function genTxt(){return buildOut().map(o=>plain(o.text)).join('\n\n');}
+function fullTxt(){return state.ed?state.ed.txt:genTxt();}                 // tekst edytowany ręcznie ma pierwszeństwo przed wygenerowanym
+const edMiss=()=>(String(state.ed.txt).match(/\[UZUPEŁNIJ/g)||[]).length;
 const htmlOut=s=>esc(s).replace(/\u0001([^\u0002]*)\u0002/g,'<mark>[UZUPEŁNIJ: $1]</mark>');
 function missCount(){return buildOut().reduce((n,o)=>n+(o.text.match(/\u0001/g)||[]).length,0);}
 
@@ -1727,10 +1770,33 @@ function renderStep1(){
   ${state.unknown.length?`<div class="warn">Brak w bazie: ${state.unknown.map(esc).join(', ')}. Dostępne kody są poniżej.</div>`:''}
   <div class="group"><h3>Wybrane procedury (w tej kolejności powstanie opis)</h3><div class="sel-list">${sel||'<span class="note">Nic jeszcze nie wybrano.</span>'}</div></div>
   ${nfzBox()}
-  ${GROUPS.map(([g,cs])=>`<div class="group"><h3>${g}</h3><div class="chips">${cs.map(c=>`<button type="button" class="chip${has(c)?' on':''}" data-act="code" data-c="${c}" aria-pressed="${has(c)}">${c}<small>${esc(D[c].name)}</small>${PTS[c]!=null?`<span class="pts">${esc(ptsLabel(c))}</span>`:''}</button>`).join('')}</div></div>`).join('')}
+  ${setsHTML()}${codesHTML()}
   </section>`;
 }
+const chipHTML=c=>`<button type="button" class="chip${has(c)?' on':''}" data-act="code" data-c="${c}" aria-pressed="${has(c)}">${c}<small>${esc(D[c].name)}</small>${PTS[c]!=null?`<span class="pts">${esc(ptsLabel(c))}</span>`:''}</button>`;
+function codesHTML(){                                  // lista kodów: ulubione na górze, ukryte schowane; tryb „Dopasuj listę”
+  const fav=cfg.fav||[],hid=cfg.hid||[];
+  const head=`<div class="row" style="justify-content:space-between;margin-top:14px"><span></span><button type="button" class="btn ghost sm" data-act="cust" id="custBtn" aria-pressed="${ui.cust}">${ui.cust?'Gotowe':'Dopasuj listę kodów'}</button></div>`;
+  if(ui.cust)return head+`<p class="note">★ – ulubiony (na górze listy) · „Ukryj” – kod znika z listy (można go dalej wpisać ręcznie).</p>`+GROUPS.map(([g,cs])=>`<div class="group"><h3>${g}</h3>${cs.map(c=>`<div class="crow${hid.includes(c)?' hid':''}" id="cr-${c}"><span class="code">${c}</span><span class="cn">${esc(D[c].name)}</span><button type="button" class="mini star" data-act="cfav" data-c="${c}" aria-pressed="${fav.includes(c)}" aria-label="Ulubiony ${c}">★</button><button type="button" class="mini" data-act="chid" data-c="${c}">${hid.includes(c)?'Pokaż':'Ukryj'}</button></div>`).join('')}</div>`).join('');
+  const favs=fav.filter(c=>!hid.includes(c));
+  return head+(favs.length?`<div class="group"><h3>Ulubione</h3><div class="chips">${favs.map(chipHTML).join('')}</div></div>`:'')+
+    GROUPS.map(([g,cs])=>{const vis=cs.filter(c=>!hid.includes(c));return vis.length?`<div class="group"><h3>${g}</h3><div class="chips">${vis.map(chipHTML).join('')}</div></div>`:'';}).join('')+
+    (hid.length?`<p class="note">Ukryte kody: ${hid.length} (${hid.join(', ')}) – „Dopasuj listę kodów”, aby je pokazać.</p>`:'');
+}
+function setsHTML(){                                   // własne zestawy kodów obok planów I–IV
+  const sets=(cfg.sets||[]).slice().sort((a,b)=>(b.fav?1:0)-(a.fav?1:0));
+  let h=`<div class="group"><h3>Moje zestawy kodów</h3>`;
+  if(ui.cust)h+=sets.map(z=>{const i=cfg.sets.indexOf(z);return `<div class="zrow" id="set-${z.id}"><input type="text" data-setn="${z.id}" value="${esc(z.name)}" aria-label="Nazwa zestawu" maxlength="60"><input type="text" data-setc="${z.id}" value="${esc(z.codes.join(', '))}" aria-label="Kody zestawu"><button type="button" class="mini" data-act="setmv" data-id="${z.id}" data-d="-1"${i?'':' disabled'} aria-label="W górę">↑</button><button type="button" class="mini" data-act="setmv" data-id="${z.id}" data-d="1"${i<cfg.sets.length-1?'':' disabled'} aria-label="W dół">↓</button><button type="button" class="mini star" data-act="setfav" data-id="${z.id}" aria-pressed="${z.fav}" aria-label="Ulubiony">★</button><button type="button" class="mini" data-act="setdup" data-id="${z.id}">Duplikuj</button><button type="button" class="mini" data-act="setdel" data-id="${z.id}">Usuń</button></div>`;}).join('')||'<p class="note">Brak zestawów.</p>';
+  else h+=sets.length?`<div class="plan-btns sets">${sets.map(z=>`<button type="button" class="plan-btn" data-act="setapply" data-id="${z.id}"><b>${z.fav?'★ ':''}${esc(z.name)}</b><span class="pc">${z.codes.map(c=>`<i>${c}</i>`).join('')}</span></button>`).join('')}</div>`:'<p class="note">Zapisz często używane połączenia kodów jako zestaw – dodasz je jednym kliknięciem. Zasady NFZ sprawdzają się jak przy ręcznym wyborze.</p>';
+  if(state.codes.length)h+=`<div class="row" style="margin-top:8px"><input type="text" id="setName" placeholder="Nazwa zestawu, np. Przegląd + skaling" maxlength="60" style="flex:1;min-width:200px"><button type="button" class="btn ghost sm" data-act="setsave">Zapisz wybrane kody jako zestaw</button></div>`;
+  return h+'</div>';
+}
 function renderStep2(){return linkBanner()+nfzBox()+sharedCard()+state.codes.map(cardHTML).join('')+ptsExtraCard();}
+function edBoxHTML(outs,m){                            // cały opis: podgląd wygenerowanego tekstu albo edycja ręczna przed zapisem
+  if(!state.ed)return `${m?`<div class="warn">Uwaga: w opisie ${m===1?'zostało':'zostały'} ${m} ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ].</div>`:''}<div class="out all">${htmlOut(outs.map(o=>o.text).join('\n\n'))}</div><div class="row" style="margin-top:8px"><button type="button" class="btn ghost sm" data-act="edtxt" id="edTxtBtn">Edytuj tekst</button><span class="note">Poprawki ręczne zapiszą się w historii zamiast tekstu z formularza.</span></div>`;
+  const n=edMiss(),chg=genTxt()!==state.ed.gen;
+  return `<div class="warn" id="ed-note">${chg?'Formularz zmienił się po edycji tekstu – Twój tekst nie został nadpisany.':'Tekst edytowany ręcznie – zmiany w formularzu go nie nadpiszą.'}${n?` W tekście ${n===1?'jest':'są'} ${n} ${plural(n,'pole','pola','pól')} [UZUPEŁNIJ].`:''}</div><textarea id="edTxt" class="edtxt" aria-label="Tekst opisu (edycja)">${esc(state.ed.txt)}</textarea><div class="row" style="margin-top:8px"><button type="button" class="btn ghost sm" data-act="regen" id="regenBtn">Wygeneruj tekst z formularza</button></div>`;
+}
 function renderStep3(){
   const outs=buildOut();
   const rows=state.codes.map(c=>{const d=D[c];let where='—';
@@ -1739,7 +1805,7 @@ function renderStep3(){
     const mn=nfzMin(c);return `<tr><td class="m">${c}</td><td>${esc(icdOf(c))}</td><td class="m">${esc(where)}</td><td class="m">${mn?mn+' min'+(nfzPackages(c)>1?` (${nfzPackages(c)}×${NFZ_MIN[c]})`:''):'—'}</td><td class="m">${aotEst(c)?'~'+aotEst(c)+' min':'—'}</td></tr>`;}).join('');
   const m=missCount();
   const P=nfzPoints();
-  const all=`<section class="card"><div class="out-head"><h2>Cały opis – wszystkie zabiegi razem</h2><div class="acts">${P.rows.length?`<a class="pts-total" href="#pts-card" title="Szczegóły wyceny poniżej" data-m="line">Wycena wizyty: ${esc(moneyLine(P))}</a>`:''}<button type="button" class="btn" data-act="copyall">Kopiuj cały opis (${outs.length} ${plural(outs.length,'zabieg','zabiegi','zabiegów')})</button></div></div><div class="save-row">${saveFieldsHTML()}<div class="save-st" id="save-st" role="status">${saveStatusHTML()}</div></div>${m?`<div class="warn">Uwaga: w opisie ${m===1?'zostało':'zostały'} ${m} ${plural(m,'pole','pola','pól')} [UZUPEŁNIJ].</div>`:''}<div class="out all">${htmlOut(outs.map(o=>o.text).join('\n\n'))}</div></section>`;
+  const all=`<section class="card"><div class="out-head"><h2>Cały opis – wszystkie zabiegi razem</h2><div class="acts">${P.rows.length?`<a class="pts-total" href="#pts-card" title="Szczegóły wyceny poniżej" data-m="line">Wycena wizyty: ${esc(moneyLine(P))}</a>`:''}<button type="button" class="btn" data-act="copyall">Kopiuj cały opis (${outs.length} ${plural(outs.length,'zabieg','zabiegi','zabiegów')})</button></div></div><div class="save-row">${saveFieldsHTML()}<div class="save-st" id="save-st" role="status">${saveStatusHTML()}</div></div>${edBoxHTML(outs,m)}</section>`;
   const sum=`<section class="card"><h2>Do diagramu i rozliczenia</h2><p class="note" style="margin:0 0 8px">Ściąga do wpisania w programie gabinetu – nie trafia do kopiowanego opisu.</p><div style="overflow-x:auto"><table class="sum"><thead><tr><th>Kod</th><th>ICD-10 wg pliku</th><th>Zaznaczone na diagramie</th><th>Min. czas NFZ</th><th>Orientacyjnie (wycena AOTMiT)</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
   const each=`<div class="group" style="margin:18px 0 8px"><h3>Poszczególne zabiegi osobno</h3></div>`+outs.map((o,i)=>`<section class="card"><div class="out-head"><h2><span class="code">${o.code}</span>${esc(D[o.code].name)}</h2><button type="button" class="btn sm" data-act="copy" data-i="${i}">Kopiuj</button></div><div class="out" id="out-${i}">${htmlOut(o.text)}</div></section>`).join('');
   const est=state.codes.reduce((n,c)=>n+(aotEst(c)||nfzMin(c)||0),0);
@@ -1806,7 +1872,7 @@ async function openEntry(el){
   if(!b||!b.snap){toast('Tego wpisu nie da się otworzyć w generatorze – użyj „Edytuj kwoty”');return;}
   if(state.codes.length&&state.savedId!==id){const r=autoSave();
     if(!(r&&r.ok)&&!arm(el,'Bieżąca wizyta nie jest zapisana – kliknij ponownie, aby ją porzucić',3600))return;}
-  try{loadVisit(m,b.snap);state.loadedTxt=b.txt;renderStep1();renderStep2();renderStep3();}      // próbne zbudowanie widoków: uszkodzone odpowiedzi (np. z błędnego pliku kopii) nie mogą zawiesić strony
+  try{loadVisit(m,b.snap);state.loadedTxt=b.txt;if(b.ed){const tx=bodyText(b);if(typeof tx==='string')state.ed={txt:tx,gen:genTxt()};}renderStep1();renderStep2();renderStep3();}      // próbne zbudowanie widoków: uszkodzone odpowiedzi (np. z błędnego pliku kopii) nie mogą zawiesić strony
   catch(e){resetVisit();ui.edit=null;state.step=4;render();toast('Tego wpisu nie da się otworzyć – zapisane odpowiedzi są uszkodzone. Opis i kwoty zostały w historii.');return;}
   ui.edit=null;state.step=state.codes.length?3:1;render();window.scrollTo(0,0);
 }
@@ -1815,6 +1881,26 @@ document.addEventListener('click',e=>{
   if(a==='step'){const n=+el.dataset.n;if(n>=4&&state.step<4)state.back=state.step;if(n===4)ui.lim=40;if(n!==6)ui.msg='';state.step=n;render();window.scrollTo(0,0);return;}
   if(a==='code'){const c=el.dataset.c;has(c)?state.codes.splice(state.codes.indexOf(c),1):state.codes.push(c);render();return;}
   if(a==='rmcode'){state.codes.splice(state.codes.indexOf(el.dataset.c),1);render();return;}
+  if(a==='cust'){ui.cust=!ui.cust;render();return;}
+  if(a==='segedit'){ui.seg={k:el.dataset.k,txt:SEG[el.dataset.k]};render();const s=document.getElementById('seg-ed');if(s)s.scrollIntoView({block:'start'});return;}
+  if(a==='segcancel'){const k=ui.seg&&ui.seg.k;ui.seg=null;render();const r=k&&document.getElementById('sg-'+k);if(r)r.scrollIntoView({block:'center'});return;}
+  if(a==='segsave'||a==='segdef'||a==='segrest'){if(!ui.seg)return;const k=ui.seg.k;let txt=ui.seg.txt;
+    if(a==='segdef'){if(!arm(el,'Przywrócić? Kliknij ponownie',3600))return;txt=SEG0[k];}
+    if(a==='segrest'){const h=(SEGU.hist[k]||[])[+el.dataset.h];if(!h)return;if(!arm(el,'Na pewno?',3600))return;txt=h.txt;}
+    if(txt===SEG[k]){toast('Bez zmian – tekst jest taki sam');return;}
+    segSet(k,txt).then(()=>{ui.seg=null;render();const r=document.getElementById('sg-'+k);if(r)r.scrollIntoView({block:'center'});toast(`Zapisano tekst ${k} jako wersję ${segVer(k)}`);},e=>toast('Nie udało się zapisać: '+(e&&e.message||e)));return;}
+  if(a==='cfav'||a==='chid'){const k=a==='cfav'?'fav':'hid',arr=cfg[k]||(cfg[k]=[]),c=el.dataset.c,i=arr.indexOf(c);i>=0?arr.splice(i,1):arr.push(c);cfgSave();render();const r=document.getElementById('cr-'+c);if(r){const b=r.querySelector('[data-act="'+a+'"]');if(b)b.focus();}return;}
+  if(a==='setapply'){const z=(cfg.sets||[]).find(x=>x.id===el.dataset.id);if(!z)return;const add=z.codes.filter(c=>D[c]&&!has(c));state.codes=state.codes.concat(add);render();toast(add.length?`Dodano zestaw „${z.name}”: ${add.join(', ')}`:`Kody zestawu „${z.name}” są już wybrane`);return;}
+  if(a==='setsave'){const n=String(($('#setName')||{}).value||'').replace(/[<>]/g,'').trim().slice(0,60);if(!n){toast('Wpisz nazwę zestawu');const i=$('#setName');if(i)i.focus();return;}
+    (cfg.sets=cfg.sets||[]).push({id:'s'+Date.now().toString(36),name:n,codes:state.codes.slice(0,30),fav:false});cfgSave();render();toast(`Zapisano zestaw „${n}” (${Math.min(30,state.codes.length)} ${plural(state.codes.length,'kod','kody','kodów')})`);return;}
+  if(a==='setmv'||a==='setfav'||a==='setdup'||a==='setdel'){const L=cfg.sets||[],i=L.findIndex(x=>x.id===el.dataset.id);if(i<0)return;
+    if(a==='setmv'){const j=i+(+el.dataset.d);if(j<0||j>=L.length)return;[L[i],L[j]]=[L[j],L[i]];}
+    if(a==='setfav')L[i].fav=!L[i].fav;
+    if(a==='setdup')L.splice(i+1,0,Object.assign({},L[i],{id:'s'+Date.now().toString(36),name:(L[i].name+' (kopia)').slice(0,60),codes:L[i].codes.slice(),fav:false}));
+    if(a==='setdel'){if(!arm(el,'Usunąć?',3000))return;L.splice(i,1);}
+    cfgSave();render();return;}
+  if(a==='edtxt'){const g=genTxt();state.ed={txt:g,gen:g};render();const ta=$('#edTxt');if(ta)ta.focus();return;}
+  if(a==='regen'){if(state.ed&&state.ed.txt!==state.ed.gen&&!arm(el,'Ręczne zmiany znikną – kliknij ponownie',3600))return;state.ed=null;render();return;}
   if(a==='plan'){const p=el.dataset.p,w=el.dataset.w;const prev=state.plan?PLANS[state.plan.p].v[state.plan.w]:[];
     const same=state.plan&&state.plan.p===p&&state.plan.w===w;
     const rest=state.codes.filter(c=>!prev.includes(c));
@@ -1835,7 +1921,7 @@ document.addEventListener('click',e=>{
   if(a==='addrow'){(state.a[el.dataset.key]=state.a[el.dataset.key]||[]).push({});rerenderCard(el.dataset.code);return;}
   if(a==='delrow'){const arr=state.a[el.dataset.key]||[];arr.splice(+el.dataset.i,1);if(!arr.length)arr.push({});rerenderCard('1206');return;}
   if(a==='copy'||a==='copyall'){const outs=buildOut(),r=autoSave();refreshSave();
-    copyText(a==='copy'?plain(outs[+el.dataset.i].text):outs.map(o=>plain(o.text)).join('\n\n'),r&&r.ok?'Skopiowano · wizyta zapisana w historii':(r&&(r.why==='diff'||r.why==='inichg')?'Skopiowano · zapis wizyty wstrzymany – wybierz u góry':'Skopiowano'));return;}
+    copyText(a==='copy'?plain(outs[+el.dataset.i].text):fullTxt(),r&&r.ok?'Skopiowano · wizyta zapisana w historii':(r&&(r.why==='diff'||r.why==='inichg')?'Skopiowano · zapis wizyty wstrzymany – wybierz u góry':'Skopiowano'));return;}
   /* rozliczenie i zapis wizyty */
   if(a==='pct'){cfg.pct=+el.dataset.v;cfgSave();if(state.vPct!=null)state.vPct=cfg.pct;render();return;}
   if(a==='usecur'){state.vPrice=null;state.vPct=null;state.vRev=null;render();return;}
@@ -1892,14 +1978,18 @@ function afterChange(el){
     else if(card)rerenderCard(card);
   } else render();
 }
+let edT=null;
 document.addEventListener('input',e=>{
   const t=e.target,ds=t.dataset||{};
+  if(t.id==='edTxt'&&state.ed){state.ed.txt=t.value;clearTimeout(edT);edT=setTimeout(()=>{autoSave();refreshSave();const n=document.getElementById('ed-note');if(n){const k=edMiss();n.textContent=(genTxt()!==state.ed.gen?'Formularz zmienił się po edycji tekstu – Twój tekst nie został nadpisany.':'Tekst edytowany ręcznie – zmiany w formularzu go nie nadpiszą.')+(k?` W tekście ${k===1?'jest':'są'} ${k} ${plural(k,'pole','pola','pól')} [UZUPEŁNIJ].`:'');}},500);return;}
   if(ds.cfg){const v=parseNum(t.value);
     if(ds.cfg==='price'&&v>0&&v<100){cfg.price=v;cfgSave();if(state.vPrice!=null)state.vPrice=v;if(state.step===3){refreshMoney();renderBar();}}
     if(ds.cfg==='rev'&&v>0&&v<=100000){cfg.rev=v;cfgSave();if(state.vRev!=null)state.vRev=v;}
     const o1=document.querySelector('[data-o="exprice"]');if(o1)o1.textContent=fmtC(centsPts(100,cfg.price));
     const o2=document.querySelector('[data-o="exrev"]');if(o2)o2.textContent=fmtC(centsHours(1.5,cfg.rev));
     return;}
+  if(t.id==='segTxt'&&ui.seg){ui.seg.txt=t.value;return;}
+  if(ds.ui==='segq'){ui.segq=t.value;const l=document.getElementById('seglist');if(l)l.innerHTML=segListHTML();return;}
   if(ds.ui){if(ds.ui==='q'){ui.q=t.value;ui.lim=40;const l=document.getElementById('hist-list');if(l){l.innerHTML=histListHTML();prefetchBodies();}}return;}
   if(ds.f){const p=ds.f.split('.'),d=p[0]==='q'?ui.quick:ui.edit;if(d){d[p[1]]=t.value;d.err='';const o=document.querySelector('[data-o="'+p[0]+'sum"]');if(o)o.innerHTML=draftSumHTML(p[0]);}return;}
   if(ds.x){const p=ds.x.split('|'),arr=exArr(p[0]);if(!arr[+p[1]])arr[+p[1]]={a:'',d:''};arr[+p[1]][p[2]]=t.value;
@@ -1917,6 +2007,10 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
   const t=e.target,ds=t.dataset||{};
   if(t.id==='bk-file'){const f=t.files&&t.files[0];t.value='';if(f)backupImport(f);return;}
+  if(ds.setn||ds.setc){const z=(cfg.sets||[]).find(x=>x.id===(ds.setn||ds.setc));if(!z)return;
+    if(ds.setn){const n=t.value.replace(/[<>]/g,'').trim().slice(0,60);if(n)z.name=n;else t.value=z.name;}
+    else{const cs=[...new Set((t.value.toUpperCase().replace(/\b23\.(\d{4})\b/g,'$1').match(/[A-Z]*\d+[A-Z]?/g)||[]).filter(c=>D[c]))].slice(0,30);if(cs.length)z.codes=cs;else toast('Zestaw musi mieć co najmniej jeden znany kod');t.value=z.codes.join(', ');}
+    cfgSave();return;}
   if(ds.cfg){t.value=num(ds.cfg==='rev'?cfg.rev:(state.step===3?vPrice():cfg.price));if(state.step===3){autoSave();refreshSave();}return;}   // bez przebudowy widoku – nie gubi kliknięcia
   if(ds.ui==='from'||ds.ui==='to'){const R=curRange();let f=ds.ui==='from'?t.value:R.from,to=ds.ui==='to'?t.value:R.to;
     if(validDate(f)&&validDate(to)&&to<f){if(ds.ui==='from')to=f;else f=to;}      // zmieniane pole wygrywa: drugie dopasowuje się, zamiast zamieniać daty miejscami

@@ -20,7 +20,7 @@ Druga aplikacja (Grafik Gabinetów) pochodzi z repo `86d8n52d6y-netizen/grafik-g
 | 3. Projekt struktury i danych | ✅ zrobione | `368161b` |
 | 4. Szkielet, użytkownicy i szyfrowanie, oba moduły w nowej strukturze | ✅ zrobione – 13 plików testów, 302 sprawdzenia, wszystkie OK | `e290020` |
 | 5. Moduł Opisy prywatne | ✅ zrobione – 14 plików testów, 351 sprawdzeń, wszystkie OK | `9258ed6` |
-| 6. Edycja szablonów, zestawy, ulubione, szybka wizyta | ⏳ część 1 (Opisy prywatne) zrobiona; część 2 (Opisy NFZ) w toku | |
+| 6. Edycja szablonów, zestawy, ulubione, szybka wizyta | ✅ zrobione – 16 plików testów, 423 sprawdzenia, wszystkie OK | `99b58c9` + ten commit |
 | 7. Połączenia modułów, eksport, testy całości, raport, scalenie | – | |
 
 Jak wznowić: przeczytaj tę tabelę i `POLACZENIE.md`, potem `git log --oneline -10` na gałęzi `polaczenie`.
@@ -267,3 +267,4 @@ Ograniczenie testów: automatyczne testy działają w Chrome. Silnika Safari (We
 | 2026-11-16 | `polaczenie` | ETAP 4: strona główna i konta z szyfrowaniem (`index.html`, `wspolne.js/css`), Opisy NFZ → `nfz.html`, Grafik → `kalendarz.html`, przeniesienie starych danych, pasek modułów, szkice, okno Zarobki; nowy test T12; 13 plików testów, 302 sprawdzenia, wszystkie OK |
 | 2026-11-16 | `polaczenie` | ETAP 5: moduł Opisy prywatne (`prywatne.html`, `prywatne-katalog.js`) – 19 procedur, cenniki gabinetów, wynagrodzenie, historia, zarobki, prywatność; poprawka: kliknięcie „Zapisz” tuż po wpisaniu pola nie ginie; test T13; razem 14 plików, 351 sprawdzeń, wszystkie OK |
 | 2026-11-16 | `polaczenie` | ETAP 6, cz. 1: Opisy prywatne – edytor szablonów (pola, kody, warunki, tekst, podgląd, wersje i przywracanie, własne procedury, duplikat, ukrywanie), migawka szablonu w zapisanej wizycie, ulubione, zestawy (przeciąganie, ceny wg cennika), tryb szybkiej wizyty; test T14 (42 sprawdzenia) |
+| 2026-11-16 | `polaczenie` | ETAP 6, cz. 2: Opisy NFZ – edycja gotowego tekstu przed zapisem (zapis, kopiowanie, szkic, otwarcie z historii), ulubione i ukryte kody, własne zestawy kodów (zasady NFZ bez zmian), edytor stałych tekstów z szablony.js z wersjami; poprawki wyglądu na telefonie; test T15; razem 16 plików, 423 sprawdzenia OK. Nie zrobiono: własne (nowe) procedury NFZ z ręcznymi punktami – do decyzji Patryka |

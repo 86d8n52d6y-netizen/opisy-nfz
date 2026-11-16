@@ -18,6 +18,12 @@ Pasek u góry każdej strony przełącza moduły bez wracania na stronę główn
 - „Konto i bezpieczeństwo”: zmiana hasła, nowy kod odzyskiwania, usunięcie konta ze wszystkimi jego danymi.
 - Przy pierwszym założeniu konta dane z poprzednich wersji (Generator opisów NFZ, Grafik Gabinetów – jeśli były otwierane w tej przeglądarce pod tym adresem) przenoszą się do konta i szyfrują; jawne kopie są usuwane dopiero po sprawdzeniu, że zaszyfrowane dane dają się odczytać.
 
+## Opisy NFZ – nowe w połączonej aplikacji
+- **Edycja gotowego tekstu** (krok 3, „Edytuj tekst”): poprawiony ręcznie opis zapisuje się w historii zamiast wygenerowanego; zmiany w formularzu go nie nadpisują; „Wygeneruj tekst z formularza” wraca do wersji z pytań.
+- **Ulubione i ukryte kody** („Dopasuj listę kodów” w kroku 1) oraz **własne zestawy kodów** obok planów I–IV – zestaw tylko dodaje kody, zasady NFZ (łączenie, limity) sprawdzają się jak zawsze.
+- **Stałe teksty opisów** (Ustawienia): edycja fragmentów z `szablony.js` (badanie, zalecenia, instruktaż…) jako wersje na Twoim koncie – z historią i przywróceniem tekstu domyślnego. Plik `szablony.js` się nie zmienia; zapisane wizyty zachowują swój tekst.
+- Prywatne: zakładki **Szablony** (edycja pól i tekstu, wersje, własne procedury, duplikat, ukrywanie, ★) i **Zestawy** (przeciąganie, ceny wg cennika), przycisk **⚡ Szybka wizyta** (tylko pola wymagane, „Kopiuj i zapisz”).
+
 ## Opisy prywatne – jak działa
 - **Wizyta**: data, gabinet (domyślnie z dyżuru w Kalendarzu), inicjały (opcjonalnie) → dodajesz dowolną liczbę procedur (wyszukiwarka i kategorie) → każda ma swój formularz (ząb FDI z diagramem, rozpoznanie z podpowiedziami ICD-10, znieczulenie, przebieg, materiały, powikłania, zalecenia, plan) → po prawej na bieżąco **opis wizyty** oraz wartość zabiegów i wynagrodzenie lekarza. „Kopiuj opis”, „Edytuj tekst” (ręczne zmiany nie są nadpisywane przez formularz), „Zapisz wizytę”, „Nowa wizyta”. Zwolnienie e-ZLA – opcjonalnie.
 - **Bez czynności dopisanych samoczynnie**: do opisu trafia tylko to, co zaznaczysz lub wpiszesz. Domyślnie zaznaczona jest wyłącznie istota zabiegu (np. „opracowanie ubytku”); „bez powikłań”, zgoda, zalecenia i znieczulenie są puste. Brakujące wymagane pola zostają jako `[UZUPEŁNIJ: …]`.
