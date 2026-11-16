@@ -2,12 +2,13 @@
 
 Plik do wznawiania pracy po przerwie (np. po wyczerpaniu limitu). Aktualizowany po każdym etapie.
 
-## Stan na 2026-11-16 (rano)
-- `main` = działająca strona na GitHub Pages (commit `e8476e8`, wersja z 17:43) – **bez zmian do czasu scalenia**.
-- Gałąź `porzadek-pracy` = rozbudowa aplikacji według specyfikacji „Ewidencja wizyt, punktów, czasu pracy i zarobków” (6 etapów, niżej).
+## Stan na 2026-11-16 (9:40)
+- `main` = `porzadek-pracy` = nowa wersja (ewidencja wizyt, statystyki, kopia zapasowa) – scalona po przejściu wszystkich testów; działa na GitHub Pages (sprawdzone 16.11.2026 ok. 9:35: nowa wersja, baza IndexedDB, 1,84 zł/pkt, 350 zł/h, generator opisów bez błędów).
+- Poprzednia wersja strony: commit `e8476e8` (jej historię nowa wersja przenosi sama przy pierwszym otwarciu).
+- Kopia aplikacji w Claude (artefakt) – ta sama wersja (wersja artefaktu `1794818108-906e`).
 - Pliki: `index.html` (UI, logika, wycena `PTS`, zapis wizyt), `szablony.js` (stałe teksty `SEG`), `testy/` (testy w przeglądarce).
 
-## Zadanie w toku: ewidencja wizyt, punktów, czasu pracy i zarobków
+## Zadanie: ewidencja wizyt, punktów, czasu pracy i zarobków (zakończone 16.11.2026)
 
 | Etap | Stan | Commit |
 |---|---|---|
@@ -16,7 +17,7 @@ Plik do wznawiania pracy po przerwie (np. po wyczerpaniu limitu). Aktualizowany 
 | 3. Wdrożenie | ✅ zrobione (kod w repo; poprawki po testach w etapach 4–5) | `e168554` |
 | 4. Testowanie | ✅ zrobione – 12 plików testów, 256 sprawdzeń, wszystkie OK | `fb535df` (cz. 1), `2db157e` (cz. 2) |
 | 5. Optymalizacja | ✅ zrobione – 3 poprawki po przeglądzie zrzutów ekranu; testy: 264 sprawdzenia, wszystkie OK | `88d615f` |
-| 6. Raport końcowy + scalenie do `main` | ✅ raport – ten commit; scalenie: po tym commicie (wynik w „Dzienniku”) | ten commit |
+| 6. Raport końcowy + scalenie do `main` | ✅ raport; scalono do `main` (fast-forward), strona na żywo i artefakt sprawdzone | `5767cd5` |
 
 Jak wznowić po przerwie: przeczytaj tę tabelę, `git log --oneline -10`, potem kontynuuj pierwszy etap bez ✅.
 Testy: `bash testy/uruchom.sh` (wszystkie) albo `bash testy/uruchom.sh <plik>`; test składni: `bash sprawdz.sh`.
@@ -229,3 +230,4 @@ Ograniczenie testów: automatyczne testy działają w Chrome. Silnika Safari (We
 | 2026-11-16 | `porzadek-pracy` | ETAP 4, część 2: testy T6–T11 – razem 12 plików, 256 sprawdzeń, wszystkie OK; 8 poprawek w aplikacji |
 | 2026-11-16 | `porzadek-pracy` | ETAP 5: ciągła oś wykresów tygodniowego i miesięcznego, kolejność kolumn tabel, przyklejona kolumna i cień przewijania; testy: 264 sprawdzenia, wszystkie OK |
 | 2026-11-16 | `porzadek-pracy` | ETAP 6: raport końcowy (zmiany, błędy, testy, ograniczenia, założenia, propozycje) |
+| 2026-11-16 | `main` | Scalenie `porzadek-pracy` → `main` (fast-forward do `5767cd5`) po 264 sprawdzeniach bez błędów; strona na żywo sprawdzona w przeglądarce; artefakt w Claude zaktualizowany |
