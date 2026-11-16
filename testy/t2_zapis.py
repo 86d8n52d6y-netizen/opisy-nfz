@@ -104,6 +104,9 @@ with sync_playwright() as p:
     v=visits(pg)
     t.chk('C1 po zamknięciu i ponownym otwarciu: tryb automatyczny nadal włączony, 7 wpisów na miejscu', pg.evaluate("cfg.auto")==True and sorted(x['id'] for x in v)==ids_before and len(v)==7, len(v))
     t.chk('C1 licznik w zakładce Historia', 'Historia (7)' in clean(pg.inner_text('#steps')), clean(pg.inner_text('#steps')))
+    t.chk('C1 ostatnia wizyta wraca na ekran (szkic), bez nowego zapisu', pg.evaluate("state.step")==3 and pg.evaluate("state.codes.length")==4 and len(visits(pg))==7)
+    pg.click('#resetBtn'); pg.wait_for_timeout(100)
+    if pg.evaluate("state.codes.length"): pg.click('#resetBtn'); pg.wait_for_timeout(100)
     gen(pg,9)
     v=visits(pg); t.chk('C2 zapis automatyczny działa po ponownym uruchomieniu: 8. wpis z nowym numerem', len(v)==8 and len({x['no'] for x in v})==8 and max(x['no'] for x in v)==v[0]['no'])
     # otwarcie wpisu z historii nie tworzy dubla i nie zapisuje bez zmian

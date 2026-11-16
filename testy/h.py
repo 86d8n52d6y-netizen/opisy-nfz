@@ -1,7 +1,18 @@
 # wspólne narzędzia testów
 from playwright.sync_api import sync_playwright
 import json, re, os, sys
-BASE=os.environ.get('OPISY_URL','http://127.0.0.1:8765/index.html')
+BASE=os.environ.get('OPISY_URL','http://127.0.0.1:8765/nfz.html')
+HOME=os.environ.get('OPISY_HOME',BASE.rsplit('/',1)[0]+'/index.html')
+KAL=BASE.rsplit('/',1)[0]+'/kalendarz.html'
+PRYW=BASE.rsplit('/',1)[0]+'/prywatne.html'
+_LOGGED=set()
+def login(ctx,name='Test',pwd='haslo-test-1',migrate=True):
+    # użytkownik testowy w danym kontekście przeglądarki: przy pierwszym – konto + przeniesienie starych danych (jak ekran zakładania konta)
+    pg=ctx.new_page(); pg.goto(HOME); pg.wait_for_function("window.G&&typeof G.createUser==='function'")
+    uid=pg.evaluate("""async ([n,p,mig])=>{const u=G.users().find(x=>x.name===n);
+      if(u){await G.login(u.id,p);return u.id;}
+      const r=await G.createUser(n,p);G.user=r.user;G.key=(await G.session()).key;if(mig&&G.users().length===1)await G.legacy.migrate();return r.user.id;}""",[name,pwd,migrate])
+    pg.close(); _LOGGED.add(id(ctx)); return uid
 V9=os.environ.get('OPISY_V9_URL','http://127.0.0.1:8765/testy/.v9/index.html')
 SHOTS=os.path.join(os.path.dirname(os.path.abspath(__file__)),'zrzuty')
 CHROME='/usr/bin/google-chrome'
@@ -17,6 +28,7 @@ class T:
 def clean(s): return (s or '').replace('\xa0',' ').replace(' ',' ')
 def launch(p): return p.chromium.launch(executable_path=CHROME,args=['--no-sandbox'])
 def open_page(ctx,url=None,errs=None,wait=True):
+    if id(ctx) not in _LOGGED: login(ctx)
     pg=ctx.new_page()
     if errs is not None:
         pg.on('pageerror',lambda e: errs.append('pageerror: '+str(e)))

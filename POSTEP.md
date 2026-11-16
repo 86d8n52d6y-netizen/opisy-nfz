@@ -16,14 +16,23 @@ Druga aplikacja (Grafik Gabinetów) pochodzi z repo `86d8n52d6y-netizen/grafik-g
 | Etap | Stan | Commit |
 |---|---|---|
 | 1. Analiza obu aplikacji | ✅ zrobione | `3eeda9b` |
-| 2. Przepisy o dokumentacji medycznej | ✅ zrobione | ten commit |
-| 3. Projekt struktury i danych | ✅ zrobione | ten commit |
-| 4. Szkielet, użytkownicy i szyfrowanie, oba moduły w nowej strukturze | – | |
+| 2. Przepisy o dokumentacji medycznej | ✅ zrobione | `368161b` |
+| 3. Projekt struktury i danych | ✅ zrobione | `368161b` |
+| 4. Szkielet, użytkownicy i szyfrowanie, oba moduły w nowej strukturze | ✅ zrobione – 13 plików testów, 302 sprawdzenia, wszystkie OK | ten commit |
 | 5. Moduł Opisy prywatne | – | |
 | 6. Edycja szablonów, zestawy, ulubione, szybka wizyta | – | |
 | 7. Połączenia modułów, eksport, testy całości, raport, scalenie | – | |
 
 Jak wznowić: przeczytaj tę tabelę i `POLACZENIE.md`, potem `git log --oneline -10` na gałęzi `polaczenie`.
+
+Stan po ETAPIE 4 (co już działa na gałęzi):
+- `index.html` – zakładanie konta (hasło + kod odzyskiwania), logowanie, odzyskiwanie hasła, kafelki, okno „Zarobki – wszystkie gabinety”, konto (blokada, zmiana hasła, nowy kod, usunięcie konta).
+- `wspolne.js` – użytkownicy, szyfrowanie AES-GCM, sesja z blokadą po bezczynności, pasek modułów, magazyn `G.store`, szyfrująca warstwa `G.wrapBE`, szkice, sumy dzienne, gabinety z Kalendarza, przeniesienie danych z poprzednich wersji.
+- `nfz.html` – dawny `index.html` Opisów NFZ: ten sam mechanizm, dane szyfrowane, pole „Gabinet” przy wizycie (domyślnie z dyżuru), szkic wizyty przy przełączaniu modułów (starszy niż 12 h – pomijany), sumy dzienne dla strony głównej.
+- `kalendarz.html` – dawny Grafik Gabinetów: dane szyfrowane w `gabinet@<id>`, sumy przychodu z dyżurów dla strony głównej, uchwyt `window.Kal` dla testów.
+- Testy: nowy `t12_sejf.py` (35 sprawdzeń), T2/T6/T8 dostosowane do logowania i baz per użytkownik.
+
+Do zapamiętania na etap 7: stara strona Grafiku (`/grafik-gabinetow/`) leży w tej samej domenie – po przeniesieniu jej dane znikają z niej; przed scaleniem zapytać Patryka o przekierowanie starej strony; rozważyć ponowne wykrywanie danych starych wersji przy logowaniu (gdy ktoś jeszcze korzysta ze starej strony).
 
 ## Zadanie: ewidencja wizyt, punktów, czasu pracy i zarobków (zakończone 16.11.2026)
 
@@ -250,3 +259,4 @@ Ograniczenie testów: automatyczne testy działają w Chrome. Silnika Safari (We
 | 2026-11-16 | `main` | Scalenie `porzadek-pracy` → `main` (fast-forward do `5767cd5`) po 264 sprawdzeniach bez błędów; strona na żywo sprawdzona w przeglądarce; artefakt w Claude zaktualizowany |
 | 2026-11-16 | `polaczenie` | Połączenie aplikacji – ETAP 1: analiza obu aplikacji, co zachować / połączyć / poprawić, 12 problemów integracji z rozwiązaniami (`POLACZENIE.md`) |
 | 2026-11-16 | `polaczenie` | ETAP 2: przepisy (ustawa o prawach pacjenta, rozporządzenie o dokumentacji – t.j. Dz.U. 2026 poz. 1391, art. 34 u.z.l., NFZ, ZUS, RODO) i 10 wniosków dla szablonów; ETAP 3: projekt plików, sejfu, danych, połączeń i modułu prywatnego |
+| 2026-11-16 | `polaczenie` | ETAP 4: strona główna i konta z szyfrowaniem (`index.html`, `wspolne.js/css`), Opisy NFZ → `nfz.html`, Grafik → `kalendarz.html`, przeniesienie starych danych, pasek modułów, szkice, okno Zarobki; nowy test T12; 13 plików testów, 302 sprawdzenia, wszystkie OK |

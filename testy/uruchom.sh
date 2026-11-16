@@ -13,7 +13,7 @@ if ! curl -sf -o /dev/null "http://127.0.0.1:$PORT/szablony.js"; then
   (python3 -m http.server "$PORT" --bind 127.0.0.1 >/tmp/opisy-http.log 2>&1 &)
   for i in $(seq 1 20); do sleep 0.3; curl -sf -o /dev/null "http://127.0.0.1:$PORT/szablony.js" && break; done
 fi
-export OPISY_URL="http://127.0.0.1:$PORT/index.html" OPISY_V9_URL="http://127.0.0.1:$PORT/testy/.v9/index.html"
+export OPISY_URL="http://127.0.0.1:$PORT/nfz.html" OPISY_HOME="http://127.0.0.1:$PORT/index.html" OPISY_V9_URL="http://127.0.0.1:$PORT/testy/.v9/index.html"
 rc=0
 if [ $# -gt 0 ]; then files=("$@"); else files=(testy/t*.py); fi
 for f in "${files[@]}"; do
