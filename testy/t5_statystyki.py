@@ -47,6 +47,26 @@ def cal_days(f,t,last):
     return max(1,(datetime.date.fromisoformat(end)-datetime.date.fromisoformat(f)).days+1)
 def month_end(f): 
     x=datetime.date.fromisoformat(f[:8]+'01'); y=(x.replace(day=28)+datetime.timedelta(days=4)); return iso(y-datetime.timedelta(days=y.day))
+def periods(kind,f,to,dates_all):
+    # ciągła oś: od max(pierwszy wpis w historii, początek zakresu) do końca zakresu (przyszłość tylko do ostatniego wpisu); pusty niepełny okres na starcie pomijany
+    items=[x for x in dates_all if f<=x<=to]
+    if not items: return 0
+    first=min(dates_all); last=max(items); td=iso(TODAY); end=to
+    if to>td:
+        end=td if f<=td else f
+        if last>end: end=min(last,to)
+    start=max(first,f)
+    def per(ds):
+        d0=datetime.date.fromisoformat(ds)
+        if kind=='w': a=d0-datetime.timedelta(days=d0.weekday()); z=a+datetime.timedelta(days=6); k=tuple(a.isocalendar()[:2])
+        else: a=d0.replace(day=1); z=datetime.date.fromisoformat(month_end(iso(a))); k=(a.year,a.month)
+        return k,iso(a),iso(z)
+    nxt=lambda z: iso(datetime.date.fromisoformat(z)+datetime.timedelta(days=1))
+    have={per(x)[0] for x in items}; k,a,z=per(start)
+    if a<start and k not in have: k,a,z=per(nxt(z))
+    n=0
+    while a<=end: n+=1; k,a,z=per(nxt(z))
+    return n
 def group(items,key):
     g={}
     for r in items: g.setdefault(key(r),[]).append(r)
@@ -74,7 +94,16 @@ with sync_playwright() as p:
         else:
             pg.fill('#i_r_from',f); pg.dispatch_event('#i_r_from','change'); pg.fill('#i_r_to',to); pg.dispatch_event('#i_r_to','change')
         return pg.input_value('#i_r_from'),pg.input_value('#i_r_to')
-    def tab(x): pg.click(f'button[data-act="tab"][data-t="{x}"]'); return pg.evaluate(TABLES)
+    CANON={'Data':['Data','Dzień','Wizyty','Punkty','Z punktów','Przeglądy','Z przeglądów','Dodatkowe','Razem','Czas wizyt'],
+           'Tydzień':['Tydzień','Dni pracy','Wizyty','Punkty','Z punktów','Z przeglądów','Dodatkowe','Razem','Śr. na dzień pracy'],
+           'Miesiąc':['Miesiąc','Razem','Zmiana do poprz. mies.','Dni pracy','Wizyty','Punkty','Z punktów','Z przeglądów','Dodatkowe','Śr. na dzień pracy','Śr. na dzień kalend.','Śr. na wizytę','Czas pracy']}
+    SHOWN={}
+    def canon(T):   # kolumny w stałej kolejności wg nagłówków – sprawdzenia nie zależą od układu na ekranie (układ sprawdzany osobno)
+        c=CANON.get(T['head'][0])
+        if not c or sorted(c)!=sorted(T['head']): return T
+        SHOWN[T['head'][0]]=T['head'][:]; ix=[T['head'].index(h) for h in c]
+        return dict(head=c,body=[[r[i] for i in ix] for r in T['body']],foot=[T['foot'][i] for i in ix] if T['foot'] else None)
+    def tab(x): pg.click(f'button[data-act="tab"][data-t="{x}"]'); return [canon(T) for T in pg.evaluate(TABLES)]
     def check_range(label,f,to,basis):
         items=[r for r in rows if f<=r['date']<=to]; A=agg(items,basis); bad=[]
         if not items: 
@@ -166,6 +195,9 @@ with sync_playwright() as p:
     f,to=set_range('all'); lastd=max(r['date'] for r in rows)
     t.chk('zakres „Wszystko”: od pierwszego do ostatniego wpisu', (f,to)==(min(r['date'] for r in rows),max(lastd,iso(TODAY))), (f,to))
     check_range('Wszystko',f,to,'full')
+    t.chk('tabele: „Razem” zaraz po nazwie okresu, średnie na dzień pracy / kalendarzowy na początku tabeli miesięcy',
+          SHOWN.get('Data',[])[:3]==['Data','Dzień','Razem'] and SHOWN.get('Tydzień',[])[:4]==['Tydzień','Razem','Dni pracy','Śr. na dzień pracy']
+          and SHOWN.get('Miesiąc',[])[:6]==['Miesiąc','Razem','Zmiana do poprz. mies.','Dni pracy','Śr. na dzień pracy','Śr. na dzień kalend.'], SHOWN)
     pg.click('button[data-act="basis"][data-v="share"]'); check_range('Wszystko',f,to,'share'); pg.click('button[data-act="basis"][data-v="full"]')
     mon=TODAY-datetime.timedelta(days=TODAY.weekday()); m1=TODAY.replace(day=1); pm1=(m1-datetime.timedelta(days=1)).replace(day=1)
     y12=(m1.replace(year=m1.year-1,month=m1.month+1) if m1.month<12 else m1.replace(month=1))
@@ -207,12 +239,41 @@ with sync_playwright() as p:
     set_range('y12'); items=[r for r in rows if exp['y12'][0]<=r['date']<=exp['y12'][1] and not (r['date']==vic['date'] and False)]
     cnt={}
     for tb in ('days','weeks','months','dow'): tab(tb); cnt[tb]=pg.locator('figure.chart g.band').count()
-    live=pg.evaluate("(()=>{const R=curRange(),l=dbList().filter(m=>m.date>=R.from&&m.date<=R.to);return {d:grp(l,m=>m.date).length,w:grp(l,m=>weekOf(m.date).key).length,m:grp(l,m=>m.date.slice(0,7)).length};})()")
-    t.chk('wykresy: liczba słupków = liczba dni / tygodni / miesięcy z wpisami; 7 słupków dni tygodnia', cnt=={'days':live['d'],'weeks':live['w'],'months':live['m'],'dow':7}, (cnt,live))
+    da=pg.evaluate("dbList().map(m=>m.date)"); R=pg.evaluate("curRange()")
+    live={'days':len({x for x in da if R['from']<=x<=R['to']}),'weeks':periods('w',R['from'],R['to'],da),'months':periods('m',R['from'],R['to'],da),'dow':7}
+    t.chk('wykresy: słupek na każdy dzień z wpisami, na każdy tydzień i miesiąc zakresu (ciągła oś); 7 słupków dni tygodnia', cnt==live, (cnt,live))
     tab('months'); caps=[money(x) for x in pg.evaluate("[...document.querySelectorAll('figure.chart text.cap')].map(e=>e.textContent)")]
     mx=pg.evaluate("(()=>{const R=curRange(),l=dbList().filter(m=>m.date>=R.from&&m.date<=R.to);return Math.max(...grp(l,m=>m.date.slice(0,7)).map(x=>x.A.total));})()")
     t.chk('wykres miesięczny: etykieta nad najwyższym słupkiem = największy miesiąc (w pełnych zł)', hu(D(mx)/100)*100 in caps, (caps,mx))
     seg=pg.evaluate("(()=>{const R=curRange(),l=dbList().filter(m=>m.date>=R.from&&m.date<=R.to),A=agg(l);return {exp:[A.pe,A.rv,A.ex],flex:[...document.querySelectorAll('.segbar .sb')].map(e=>+e.style.flexGrow)};})()")
     t.chk('pasek struktury przychodów: proporcje = punkty : przeglądy : dodatkowe', len(seg['flex'])==3 and all(abs(a-b)<=a*1e-4 for a,b in zip(seg['exp'],seg['flex'])), seg)
+    # ---------- luki w ewidencji: miesiąc bez wpisów (np. urlop) ----------
+    ctxG=b.new_context(viewport={'width':1300,'height':1000}); pG=open_page(ctxG,errs=errs)
+    def seedG(dates): pG.evaluate(SEED_JS,[[x,'AB',100,0,0,'',30,'man'] for x in dates])
+    seedG(['2025-12-10','2026-01-05','2026-01-20','2026-02-03','2026-04-14','2026-04-15'])
+    pG.click('#steps button[data-n="5"]')
+    def bands(): return pG.evaluate("[...document.querySelectorAll('figure.chart g.band')].map(g=>g.getAttribute('aria-label'))")
+    def setG(f,to):
+        pG.fill('#i_r_from',f); pG.dispatch_event('#i_r_from','change'); pG.fill('#i_r_to',to); pG.dispatch_event('#i_r_to','change')
+    def daG(): return pG.evaluate("dbList().map(m=>m.date)")
+    setG('2026-01-01','2026-04-30'); pG.click('button[data-act="tab"][data-t="months"]'); bm=bands(); TM=[canon(x) for x in pG.evaluate(TABLES)][0]
+    t.chk('wykres miesięczny z luką: styczeń, luty, MARZEC (0 zł – brak wpisów), kwiecień; tabela – tylko 3 miesiące z wpisami',
+          [x.split(':')[0] for x in bm]==['styczeń 2026','luty 2026','marzec 2026','kwiecień 2026'] and bm[2].endswith('brak wpisów') and len(TM['body'])==3 and len(bm)==periods('m','2026-01-01','2026-04-30',daG()), (bm,len(TM['body'])))
+    kw=[r for r in TM['body'] if r[0]=='kwiecień 2026'][0]
+    t.chk('…„Zmiana do poprz. mies.” dla kwietnia = „—” (marzec bez wpisów, nie porównuje z lutym)', kw[2]=='—', kw[2])
+    pG.click('button[data-act="tab"][data-t="weeks"]'); bw=bands()
+    t.chk('wykres tygodniowy: pusty, niepełny tydzień 1 (29.12–04.01) pominięty; ciągła oś do końca zakresu (tydz. 2–18)', bw[0].startswith('Tydzień 2 ') and bw[-1].startswith('Tydzień 18 ') and len(bw)==periods('w','2026-01-01','2026-04-30',daG())==17 and sum('brak wpisów' in x for x in bw)==13, (len(bw),bw[0],bw[-1]))
+    seedG(['2026-01-02']); setG('2026-01-01','2026-04-30'); pG.click('button[data-act="tab"][data-t="weeks"]'); bw=bands()
+    t.chk('…z wpisem 02.01 niepełny tydzień 1 jest pokazany', bw[0].startswith('Tydzień 1 ') and len(bw)==periods('w','2026-01-01','2026-04-30',daG())==18, bw[0])
+    pG.click('button[data-act="range"][data-p="y12"]'); pG.click('button[data-act="tab"][data-t="months"]'); bm=bands(); R=pG.evaluate("curRange()")
+    cur=MONN[TODAY.month-1]+' '+str(TODAY.year)
+    t.chk(f'„Ostatnie 12 mies.”: od pierwszego wpisu w historii (grudzień 2025) do bieżącego miesiąca ({cur}), bez miesięcy z przyszłości', bm[0].startswith('grudzień 2025') and bm[-1].startswith(cur) and len(bm)==periods('m',R['from'],R['to'],daG()), (len(bm),bm[0],bm[-1]))
+    pG.click('button[data-act="range"][data-p="all"]'); bm2=bands()
+    t.chk('„Wszystko”: ten sam ciąg miesięcy', [x.split(':')[0] for x in bm2]==[x.split(':')[0] for x in bm])
+    ctxH=b.new_context(viewport={'width':1300,'height':1000}); pH=open_page(ctxH,errs=errs); pH.evaluate(SEED_JS,[['2026-03-02','AB',100,0,0,'',30,'man']])
+    pH.click('#steps button[data-n="5"]'); pH.click('button[data-act="range"][data-p="y12"]'); pH.click('button[data-act="tab"][data-t="months"]')
+    bh=pH.evaluate("[...document.querySelectorAll('figure.chart g.band')].map(g=>g.getAttribute('aria-label').split(':')[0])")
+    t.chk('nowa ewidencja (pierwszy wpis w marcu): brak zerowych słupków za miesiące sprzed pierwszego wpisu', bh[0]=='marzec 2026' and len(bh)==TODAY.month-3+1, bh[:3])
+    ctxG.close(); ctxH.close()
     t.chk('brak błędów JS', not errs, errs)
     t.done('T5 statystyki'); b.close()

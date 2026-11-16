@@ -14,8 +14,8 @@ Plik do wznawiania pracy po przerwie (np. po wyczerpaniu limitu). Aktualizowany 
 | 1. Audyt obecnej aplikacji | ✅ zrobione | `2d9ef5e` |
 | 2. Plan zmian | ✅ zrobione | `67da90b` |
 | 3. Wdrożenie | ✅ zrobione (kod w repo; poprawki po testach w etapach 4–5) | `e168554` |
-| 4. Testowanie | ✅ zrobione – 12 plików testów, 256 sprawdzeń, wszystkie OK | `fb535df` (cz. 1), ten commit (cz. 2) |
-| 5. Optymalizacja | – | |
+| 4. Testowanie | ✅ zrobione – 12 plików testów, 256 sprawdzeń, wszystkie OK | `fb535df` (cz. 1), `2db157e` (cz. 2) |
+| 5. Optymalizacja | ✅ zrobione – 3 poprawki po przeglądzie zrzutów ekranu; testy: 264 sprawdzenia, wszystkie OK | ten commit |
 | 6. Raport końcowy + scalenie do `main` | – | |
 
 Jak wznowić po przerwie: przeczytaj tę tabelę, `git log --oneline -10`, potem kontynuuj pierwszy etap bez ✅.
@@ -117,7 +117,7 @@ z niezależnym liczeniem w Pythonie (ułamki dziesiętne `Decimal`, kalendarz `d
 | `t2_zapis.py` | tryb z inicjałami i automatyczny, brak dubli i zbędnych zapisów, pytanie zamiast nadpisania (inne inicjały / wiek / zabiegi / API+GI), ponowne uruchomienie, usunięcie i edycja wpisu bieżącej wizyty | 38/38 |
 | `t3_czas.py` | zasada +10 min (1 ząb, kilka zębów, kilka procedur – zawsze raz), które kody ją wywołują, limity NFZ, czas ręczny, zapis czasu we wpisie | 23/23 |
 | `t4_wpisy.py` | szybki wpis (punkty / przeglądy / kwota), 10 rodzajów błędnych danych, edycja kwot i stawek wpisu, anulowanie, usuwanie, wyszukiwanie, sumy po każdej zmianie | 27/27 |
-| `t5_statystyki.py` | 1060 wpisów z 13 miesięcy: kafelki i wszystkie tabele (Dni, Tygodnie, Miesiące, Dni tygodnia) dla 11 zakresów i obu podstaw; suma dni = tygodni = miesięcy; wpisy anonimowe; edycja i usunięcie; wykresy | 27/27 |
+| `t5_statystyki.py` | 1060 wpisów z 13 miesięcy: kafelki i wszystkie tabele (Dni, Tygodnie, Miesiące, Dni tygodnia) dla 11 zakresów i obu podstaw; suma dni = tygodni = miesięcy; wpisy anonimowe; edycja i usunięcie; wykresy (od ETAPU 5 także luki w ewidencji i kolejność kolumn) | 27/27 → 35/35 po ETAPIE 5 |
 | `t6_migracja.py` | przeniesienie historii z wersji z `main` (prawdziwa stara wersja w tej samej przeglądarce): wpisy ze stawkami 1,81 / 1,90 zł i 40 / 35%, wpis bez treści opisu, uszkodzony indeks; teksty opisów co do znaku, kwoty co do grosza, numery, stare klucze kasowane dopiero po sprawdzeniu, „Otwórz i popraw”, przeliczenie po nowych stawkach | 17/17 |
 | `t7_kopia.py` | pobranie kopii .json, utrata danych → odtworzenie 1:1, ponowne wczytanie bez dubli, starsza kopia nie cofa nowszej poprawki, nowe urządzenie (wpisy + ustawienia), zderzenie numerów, pliki uszkodzone / obce / częściowo błędne, opisy do .txt | 18/18 |
 | `t8_magazyn.py` | brak IndexedDB → pamięć zapasowa (localStorage) i powrót do głównej bazy bez dubli; baza, która nie odpowiada; cała pamięć zablokowana; błąd zapisu (brak miejsca) z ponowieniem; dwie karty naraz (wpisy, numery, stawki) | 19/19 |
@@ -152,6 +152,20 @@ z niezależnym liczeniem w Pythonie (ułamki dziesiętne `Decimal`, kalendarz `d
 7. Przyciski „usuń”, „brak”, „×” przy kodach mają co najmniej 24 × 24 px (WCAG 2.2, kryterium 2.5.8) – wygodniej na telefonie – T11.
 8. Ustawienia, opis kopii zapasowej: dopisano, że wpis usunięty w aplikacji wróci po wczytaniu kopii, która go zawiera.
 
+### ETAP 5 – Optymalizacja (po testach i przeglądzie zrzutów ekranu)
+
+Przejrzane zrzuty: telefon 320 / 390 px, tablet, komputer, jasny i ciemny motyw (`testy/zrzuty/`, poza repo). Zmiany – każda z uzasadnieniem:
+
+| Zmiana | Dlaczego | Jak sprawdzone |
+|---|---|---|
+| Wykres tygodniowy i miesięczny: ciągła oś czasu – tydzień / miesiąc bez wpisów to słupek 0 zł („brak wpisów” w podpowiedzi). Bez zer sprzed pierwszego wpisu w historii (brak danych ≠ brak zarobku) i bez okresów z przyszłości; pusty, niepełny okres na początku zakresu pominięty | miesiąc bez wpisów (np. urlop) znikał z osi – po „sie 2026” od razu „lis 2026”; wykres sugerował ciągłość, której nie było | T5: wyrocznia liczby słupków w Pythonie + 6 nowych sprawdzeń (luka w marcu, tydzień 1 z wpisem i bez, nowa ewidencja od marca, „12 mies.” = „Wszystko”) |
+| Tabele: „Razem” zaraz po nazwie okresu; w Miesiącach zaraz potem obie średnie (na dzień pracy / kalendarzowy) | na komputerze 4 ostatnie kolumny tabeli miesięcy – w tym obie średnie wymagane w specyfikacji – były poza kartą; na telefonie widać było tylko datę i liczbę wizyt | T5: tabele czytane po nagłówkach (wyniki niezależne od kolejności) + osobne sprawdzenie kolejności |
+| Tabele szersze niż ekran: przyklejona pierwsza kolumna i cień przy prawej krawędzi, dopóki są dalsze kolumny | nic nie wskazywało, że tabelę da się przewinąć w bok, a przy przewijaniu znikała nazwa wiersza | zrzuty ekranu (telefon, komputer, ciemny motyw); T11 – nic nie wystaje poza ekran |
+
+Rozważone i niewprowadzone: ciągła oś na wykresie dziennym – co 3.–4. słupek byłby zerem za weekend, a tytuł wykresu mówi „dni z wpisami”; wolne dni widać w tabeli dni i w kafelku „dni przepracowane na N kalendarzowych”.
+
+Ograniczenie testów: automatyczne testy działają w Chrome. Silnika Safari (WebKit) nie dało się pobrać w tym środowisku (sieć blokuje serwer pobierania), więc zgodność z iPhone'em sprawdziłem tylko przeglądem kodu: brak składni wymagającej nowszego Safari (`?.`, `??`, `.at()`, `Object.hasOwn`, `structuredClone`, `replaceAll`), funkcje pamięci przeglądarki są w blokach z obsługą błędu, a `color-mix` (cień tabeli) w starszej przeglądarce po prostu się nie pokaże.
+
 ## Zrobione wcześniej
 - [x] Szablony: pacjent poniżej i powyżej 5 r.ż., plany wizyt I–IV
 - [x] Wycena punktowa (zarz. 95/2026/DSOZ, 44/2025/DSOZ), kwota i udział lekarza 40%/35%
@@ -167,3 +181,4 @@ z niezależnym liczeniem w Pythonie (ułamki dziesiętne `Decimal`, kalendarz `d
 | 2026-11-15 | `porzadek-pracy` | ETAP 3: wdrożenie w `index.html` – ewidencja wizyt, dwa tryby zapisu, przeglądy, kwoty dodatkowe, +10 min, statystyki, kopia zapasowa |
 | 2026-11-16 | `porzadek-pracy` | ETAP 4, część 1: testy T0–T5 (149 sprawdzeń, wszystkie OK), 3 poprawki w aplikacji |
 | 2026-11-16 | `porzadek-pracy` | ETAP 4, część 2: testy T6–T11 – razem 12 plików, 256 sprawdzeń, wszystkie OK; 8 poprawek w aplikacji |
+| 2026-11-16 | `porzadek-pracy` | ETAP 5: ciągła oś wykresów tygodniowego i miesięcznego, kolejność kolumn tabel, przyklejona kolumna i cień przewijania; testy: 264 sprawdzenia, wszystkie OK |

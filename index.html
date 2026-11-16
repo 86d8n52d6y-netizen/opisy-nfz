@@ -239,7 +239,10 @@ table.sum .sub-n{display:block;font-family:var(--font-body);font-size:12px;color
 .tip-r{display:flex;align-items:center;gap:6px;line-height:1.5}.tip-r b{font-weight:600;font-variant-numeric:tabular-nums}.tip-r span{color:var(--muted)}
 .tkey{width:10px;height:3px;border-radius:2px;display:inline-block;background:var(--sc);flex:0 0 auto}
 .tip-f{margin-top:4px;padding-top:4px;border-top:1px solid var(--line);color:var(--muted)}
-.tblw{overflow-x:auto;margin-top:10px}
+.tblw{overflow-x:auto;margin-top:10px;
+  background:linear-gradient(to left,var(--surface) 40%,transparent) right/28px 100% no-repeat local,
+    radial-gradient(farthest-side at 100% 50%,color-mix(in srgb,var(--ink) 22%,transparent),transparent) right/12px 100% no-repeat scroll}   /* cień po prawej = tabela ma dalsze kolumny (znika po przewinięciu do końca) */
+table.stat th:first-child,table.stat td:first-child{position:sticky;left:0;z-index:1;background:var(--surface);box-shadow:inset -1px 0 0 var(--line)}
 table.stat{white-space:nowrap;font-variant-numeric:tabular-nums}
 table.stat td::first-letter{text-transform:none}
 .lead{margin:0 0 6px;font-size:14px}.subh{font-size:14px;margin:20px 0 0}
@@ -1358,7 +1361,19 @@ function curRange(){
   if(r.p==='custom'){let f=validDate(r.from)?r.from:todayISO(),t=validDate(r.to)?r.to:f;if(t<f){const x=f;f=t;t=x;}return {p:'custom',from:f,to:t};}
   const x=rangeOf(r.p);return {p:r.p,from:x[0],to:x[1]};
 }
-function calDays(from,to,last){const t=todayISO();let end=to;if(to>t){end=from<=t?t:from;if(last&&last>end)end=last<to?last:to;}return Math.max(1,daysBetween(from,end)+1);}   // dni kalendarzowe zakresu; dni z przyszłości liczą się tylko do ostatniego wpisu
+function rangeEnd(from,to,last){const t=todayISO();let end=to;if(to>t){end=from<=t?t:from;if(last&&last>end)end=last<to?last:to;}return end;}   // dni z przyszłości liczą się tylko do ostatniego wpisu
+function calDays(from,to,last){return Math.max(1,daysBetween(from,rangeEnd(from,to,last))+1);}   // dni kalendarzowe zakresu
+/* Ciągła oś czasu wykresów tygodniowego i miesięcznego: okres bez wpisów (np. urlop) to słupek 0 zł, a nie „sklejona” oś.
+   Zer nie rysujemy przed pierwszym wpisem w historii (brak danych ≠ brak zarobku) ani w przyszłości; pusty, niepełny okres na początku zakresu pomijamy. */
+function periodRows(kind,list,R,g){
+  if(!list.length)return g;
+  const all=dbList(),first=all.length?all[all.length-1].date:R.from,end=rangeEnd(R.from,R.to,lastDate(list)),start=first>R.from?first:R.from;
+  const per=kind==='w'?d=>{const w=weekOf(d);return {k:w.key,from:w.from,to:w.to};}:d=>{const f=d.slice(0,8)+'01';return {k:d.slice(0,7),from:f,to:monthEnd(f)};};
+  const by=new Map(g.map(x=>[x.k,x])),out=[];
+  let p=per(start);if(p.from<start&&!by.has(p.k))p=per(addDays(p.to,1));
+  for(let i=0;p.from<=end&&i<5000;i++){out.push(Object.assign({},by.get(p.k)||{k:p.k,items:[],A:agg([]),empty:true},{from:p.from}));p=per(addDays(p.to,1));}
+  return out;
+}
 const lastDate=items=>items.reduce((mx,m)=>m.date>mx?m.date:mx,'');
 const avgC=(c,n)=>n?Math.round(c/n):0;
 function visTotal(items){return items.reduce((s,m)=>s+(isVisit(m)?calc(m).total:0),0);}
@@ -1421,25 +1436,25 @@ function tabDays(list){
   const g=grp(list,m=>m.date),T=agg(list);
   const chart=barChart('d',g.map(x=>({l1:x.k.slice(8)+'.'+x.k.slice(5,7),l2:DOW3[dowOf(x.k)],vals:x.A,tot:x.A.total,aria:fmtDay(x.k)+': '+fmtC(x.A.total),
     tip:tipOf(DOW[dowOf(x.k)]+', '+fmtDate(x.k),x.A,x.A.vis+' '+plural(x.A.vis,'wizyta','wizyty','wizyt'))})),KEYS3,{title:'Zarobek dzienny – dni z wpisami'});
-  const cols=[{h:'Data'},{h:'Dzień'},{h:'Wizyty',r:1},{h:'Punkty',r:1},{h:'Z punktów',r:1},{h:'Przeglądy',r:1},{h:'Z przeglądów',r:1},{h:'Dodatkowe',r:1},{h:'Razem',r:1},{h:'Czas wizyt',r:1}];
-  const row=(a,b,A)=>[a,b,A.vis,fmtP(A.ptsC/100),fmtC(A.pe),fmtH(A.revHc/100),fmtC(A.rv),fmtC(A.ex),'<b>'+fmtC(A.total)+'</b>',fmtMin(A.min)];
+  const cols=[{h:'Data'},{h:'Dzień'},{h:'Razem',r:1},{h:'Wizyty',r:1},{h:'Punkty',r:1},{h:'Z punktów',r:1},{h:'Przeglądy',r:1},{h:'Z przeglądów',r:1},{h:'Dodatkowe',r:1},{h:'Czas wizyt',r:1}];   // najważniejsza kwota zaraz po dacie – widoczna też na telefonie
+  const row=(a,b,A)=>[a,b,'<b>'+fmtC(A.total)+'</b>',A.vis,fmtP(A.ptsC/100),fmtC(A.pe),fmtH(A.revHc/100),fmtC(A.rv),fmtC(A.ex),fmtMin(A.min)];
   return chart+tableHTML(cols,g.slice().reverse().map(x=>row(fmtDate(x.k),DOW[dowOf(x.k)],x.A)),row('Razem',g.length+' '+plural(g.length,'dzień','dni','dni'),T));
 }
-function tabWeeks(list){
+function tabWeeks(list,R){
   const g=grp(list,m=>weekOf(m.date).key),T=agg(list);
-  const wk=x=>weekOf(x.items[0].date),lab=w=>w.from.slice(8)+'.'+w.from.slice(5,7)+'–'+w.to.slice(8)+'.'+w.to.slice(5,7);
-  const chart=barChart('w',g.map(x=>{const w=wk(x);return {l1:'tydz. '+w.w,l2:lab(w),vals:x.A,tot:x.A.total,aria:'Tydzień '+w.w+' ('+lab(w)+'): '+fmtC(x.A.total),
-    tip:tipOf('Tydzień '+w.w+' · '+fmtDate(w.from)+' – '+fmtDate(w.to),x.A,x.A.days.size+' '+plural(x.A.days.size,'dzień pracy','dni pracy','dni pracy'))};}),KEYS3,{title:'Zarobek tygodniowy (poniedziałek–niedziela)'});
-  const cols=[{h:'Tydzień'},{h:'Dni pracy',r:1},{h:'Wizyty',r:1},{h:'Punkty',r:1},{h:'Z punktów',r:1},{h:'Z przeglądów',r:1},{h:'Dodatkowe',r:1},{h:'Razem',r:1},{h:'Śr. na dzień pracy',r:1}];
-  const row=(a,A)=>[a,A.days.size,A.vis,fmtP(A.ptsC/100),fmtC(A.pe),fmtC(A.rv),fmtC(A.ex),'<b>'+fmtC(A.total)+'</b>',fmtC(avgC(A.total,A.days.size))];
+  const wk=x=>weekOf(x.from||x.items[0].date),lab=w=>w.from.slice(8)+'.'+w.from.slice(5,7)+'–'+w.to.slice(8)+'.'+w.to.slice(5,7);
+  const chart=barChart('w',periodRows('w',list,R,g).map(x=>{const w=wk(x);return {l1:'tydz. '+w.w,l2:lab(w),vals:x.A,tot:x.A.total,aria:'Tydzień '+w.w+' ('+lab(w)+'): '+(x.empty?'brak wpisów':fmtC(x.A.total)),
+    tip:tipOf('Tydzień '+w.w+' · '+fmtDate(w.from)+' – '+fmtDate(w.to),x.A,x.empty?'brak wpisów':x.A.days.size+' '+plural(x.A.days.size,'dzień pracy','dni pracy','dni pracy'))};}),KEYS3,{title:'Zarobek tygodniowy (poniedziałek–niedziela)'});
+  const cols=[{h:'Tydzień'},{h:'Razem',r:1},{h:'Dni pracy',r:1},{h:'Śr. na dzień pracy',r:1},{h:'Wizyty',r:1},{h:'Punkty',r:1},{h:'Z punktów',r:1},{h:'Z przeglądów',r:1},{h:'Dodatkowe',r:1}];
+  const row=(a,A)=>[a,'<b>'+fmtC(A.total)+'</b>',A.days.size,fmtC(avgC(A.total,A.days.size)),A.vis,fmtP(A.ptsC/100),fmtC(A.pe),fmtC(A.rv),fmtC(A.ex)];
   return chart+tableHTML(cols,g.slice().reverse().map(x=>{const w=wk(x);return row(w.w+' · '+fmtDate(w.from)+' – '+fmtDate(w.to),x.A);}),row('Razem',T));
 }
 function tabMonths(list,R){
   const g=grp(list,m=>m.date.slice(0,7)),T=agg(list),nm=k=>MON[+k.slice(5)-1]+' '+k.slice(0,4);
-  const chart=barChart('m',g.map(x=>({l1:MON3[+x.k.slice(5)-1],l2:x.k.slice(0,4),vals:x.A,tot:x.A.total,aria:nm(x.k)+': '+fmtC(x.A.total),
-    tip:tipOf(nm(x.k),x.A,x.A.days.size+' '+plural(x.A.days.size,'dzień pracy','dni pracy','dni pracy'))})),KEYS3,{title:'Zarobek miesięczny'});
-  const cols=[{h:'Miesiąc'},{h:'Razem',r:1},{h:'Zmiana do poprz. mies.',r:1},{h:'Dni pracy',r:1},{h:'Wizyty',r:1},{h:'Punkty',r:1},{h:'Z punktów',r:1},{h:'Z przeglądów',r:1},{h:'Dodatkowe',r:1},{h:'Śr. na dzień pracy',r:1},{h:'Śr. na dzień kalend.',r:1},{h:'Śr. na wizytę',r:1},{h:'Czas pracy',r:1}];
-  const row=(a,A,d,cd,vt)=>[a,'<b>'+fmtC(A.total)+'</b>',d,A.days.size,A.vis,fmtP(A.ptsC/100),fmtC(A.pe),fmtC(A.rv),fmtC(A.ex),fmtC(avgC(A.total,A.days.size)),fmtC(avgC(A.total,cd)),fmtC(avgC(vt,A.vis)),fmtMin(A.work)];
+  const chart=barChart('m',periodRows('m',list,R,g).map(x=>({l1:MON3[+x.k.slice(5)-1],l2:x.k.slice(0,4),vals:x.A,tot:x.A.total,aria:nm(x.k)+': '+(x.empty?'brak wpisów':fmtC(x.A.total)),
+    tip:tipOf(nm(x.k),x.A,x.empty?'brak wpisów':x.A.days.size+' '+plural(x.A.days.size,'dzień pracy','dni pracy','dni pracy'))})),KEYS3,{title:'Zarobek miesięczny'});
+  const cols=[{h:'Miesiąc'},{h:'Razem',r:1},{h:'Zmiana do poprz. mies.',r:1},{h:'Dni pracy',r:1},{h:'Śr. na dzień pracy',r:1},{h:'Śr. na dzień kalend.',r:1},{h:'Wizyty',r:1},{h:'Śr. na wizytę',r:1},{h:'Punkty',r:1},{h:'Z punktów',r:1},{h:'Z przeglądów',r:1},{h:'Dodatkowe',r:1},{h:'Czas pracy',r:1}];
+  const row=(a,A,d,cd,vt)=>[a,'<b>'+fmtC(A.total)+'</b>',d,A.days.size,fmtC(avgC(A.total,A.days.size)),fmtC(avgC(A.total,cd)),A.vis,fmtC(avgC(vt,A.vis)),fmtP(A.ptsC/100),fmtC(A.pe),fmtC(A.rv),fmtC(A.ex),fmtMin(A.work)];
   const rows=g.map((x,i)=>{const f=x.k+'-01',pv=g[i-1]&&g[i-1].k===monthShift(f,-1).slice(0,7)?g[i-1].A.total:null;
     const d=pv?((x.A.total>=pv?'▲ +':'▼ −')+fmtP(Math.abs(Math.round((x.A.total-pv)/pv*1000)/10))+'%'):'—';
     return row(nm(x.k),x.A,d,calDays(f,monthEnd(f),lastDate(x.items)),visTotal(x.items));});
@@ -1480,7 +1495,7 @@ function renderStats(){
    <p class="note" style="margin:0;flex:1 1 220px">${dbList().length?`W zakresie: <b>${list.length}</b> z ${dbList().length} ${plural(dbList().length,'wpisu','wpisów','wpisów')}.`:'Brak zapisanych wizyt – statystyki pojawią się po pierwszym wpisie.'}${cfg.basis==='share'?' Do sum wchodzi % lekarza zapisany przy wizycie; przeglądy i kwoty dodatkowe w całości.':''}</p></div></section>`;
   if(!list.length)return filt+'<section class="card"><p class="note" style="margin:0">Brak wpisów w wybranym zakresie dat.</p></section>';
   const tab=ui.tab;
-  const body=tab==='weeks'?tabWeeks(list):tab==='months'?tabMonths(list,R):tab==='dow'?tabDow(list):tabDays(list);
+  const body=tab==='weeks'?tabWeeks(list,R):tab==='months'?tabMonths(list,R):tab==='dow'?tabDow(list):tabDays(list);
   return filt+kpiHTML(A,R,list)+`<section class="card"><div class="tabs" role="tablist">${TABS.map(t=>`<button type="button" role="tab" aria-selected="${tab===t[0]}" class="${tab===t[0]?'on':''}" data-act="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div>${body}</section>`;
 }
 function tipShow(el,px,py){
